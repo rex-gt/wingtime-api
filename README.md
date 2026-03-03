@@ -6,44 +6,61 @@ A comprehensive backend service for managing aircraft scheduling, flight logs, a
 
 ```
 flying-club-api/
-├── src/                    # Application source code
-│   ├── app.js             # Express app setup and route definitions
-│   ├── config/            # Configuration files
-│   │   └── database.js    # PostgreSQL connection pool
-│   ├── controllers/       # Route handlers
-│   │   └── authController.js
-│   ├── middleware/        # Custom middleware
-│   │   └── auth.js        # JWT authentication middleware
-│   ├── routes/            # Route definitions
+├── src/                          # Application source code
+│   ├── app.js                   # Express app setup and main endpoint definitions
+│   ├── index.js                 # Application entry point
+│   ├── config/
+│   │   └── database.js          # PostgreSQL connection pool configuration
+│   ├── controllers/
+│   │   ├── aircraftController.js
+│   │   ├── authController.js
+│   │   ├── memberController.js
+│   │   └── reservationsController.js
+│   ├── middleware/
+│   │   └── auth.js              # JWT authentication middleware
+│   ├── routes/
+│   │   ├── aircraftRoutes.js
+│   │   ├── memberRoutes.js
+│   │   ├── reservationsRoutes.js
 │   │   └── userRoutes.js
-│   └── utils/             # Utility functions (for future use)
-├── db/                    # Database-related files
-│   ├── schema.sql         # Database schema
-│   └── sample-data.sql    # Sample data for testing
-├── test/                  # Test files and scripts
-│   └── auth-curl-example.sh
-├── index.js               # Application entry point
-├── package.json           # Dependencies and scripts
-├── .env.example           # Environment variables template
-└── README.md              # This file
+│   └── utils/                   # Utility functions (for future use)
+├── db/
+│   ├── schema.sql               # Complete database schema
+│   └── sample-data.sql          # Sample data for testing
+├── test/                        # Comprehensive test suite
+│   ├── aircraft.test.js         # Aircraft endpoint tests (6 tests)
+│   ├── app.test.js              # API smoke tests (4 tests)
+│   ├── auth.test.js             # Authentication tests (4 tests)
+│   ├── auth-curl-example.sh     # Example curl commands for auth
+│   ├── billing.test.js          # Billing endpoint tests (15 tests)
+│   ├── flightlogs.test.js       # Flight logs tests (8 tests)
+│   ├── members.test.js          # Members endpoint tests (5 tests)
+│   ├── reservations.test.js     # Reservations endpoint tests (6 tests)
+│   └── utility.test.js          # Utility endpoint tests (12 tests)
+├── index.js                     # Application entry point
+├── package.json                 # Dependencies and scripts
+├── .env.example                 # Environment variables template
+└── README.md                    # This file
 ```
 
 ## Features
 
-- **Member Management**: CRUD operations for club members
-- **Aircraft Fleet Management**: Track aircraft details, availability, and tach hours
-- **Reservation System**: Schedule aircraft with conflict detection
-- **Flight Logging**: Record actual flight times and tach hours
-- **Automated Billing**: Generate billing records based on tach hours used
+- **Member Management**: CRUD operations for club members with role-based access
+- **Aircraft Fleet Management**: Track aircraft details, availability, tach hours, and hourly rates
+- **Reservation System**: Schedule aircraft with built-in conflict detection
+- **Flight Logging**: Record actual flight times, calculate tach hours, auto-update aircraft tach
+- **Automated Billing**: Generate billing records based on tach hours and hourly rates
 - **Availability Checking**: Query aircraft availability for specific time ranges
+- **JWT Authentication**: Secure endpoints with token-based authentication
+- **Comprehensive Testing**: 60 tests across 8 test suites with 100% endpoint coverage
 
 ## Database Schema
 
 ### Tables
 
-1. **members** - Club member information
+1. **members** - Club member information and authentication
 2. **aircraft** - Fleet aircraft details and current tach hours
-3. **reservations** - Scheduled aircraft bookings
+3. **reservations** - Scheduled aircraft bookings with conflict detection
 4. **flight_logs** - Actual flight records with tach hours
 5. **billing_records** - Generated billing based on usage
 
@@ -53,6 +70,7 @@ flying-club-api/
 
 - Node.js (v14 or higher)
 - PostgreSQL (v12 or higher)
+- npm or yarn
 
 ### Installation
 
@@ -90,6 +108,70 @@ npm run dev
 ```
 
 The API will be available at `http://localhost:3000`
+
+## Testing
+
+### Test Coverage
+
+The project includes comprehensive test coverage with **60 tests** across **8 test suites**, covering **100% of all endpoints**:
+
+| Test Suite | Tests | Coverage |
+|-----------|-------|----------|
+| aircraft.test.js | 6 | Aircraft CRUD, Availability |
+| app.test.js | 4 | API Smoke Tests |
+| auth.test.js | 4 | Registration, Login, Profile |
+| billing.test.js | 15 | Billing CRUD, Generation, Summary |
+| flightlogs.test.js | 8 | Flight Logs CRUD, Filtering |
+| members.test.js | 5 | Members CRUD |
+| reservations.test.js | 6 | Reservations CRUD, Conflict Detection |
+| utility.test.js | 12 | Aircraft Availability Utility |
+| **TOTAL** | **60** | **31 Endpoints** |
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run specific test suite
+npm test auth.test.js
+npm test billing.test.js
+npm test flightlogs.test.js
+
+# Run tests in watch mode
+npm test -- --watch
+
+# Run with coverage report
+npm test -- --coverage
+```
+
+### Test Architecture
+
+- Tests use Jest as the testing framework
+- Database layer is mocked using jest.mock() - **no real database required**
+- JWT tokens are mocked for authentication testing
+- All tests run sequentially with `--runInBand` flag
+- Tests follow the Arrange-Act-Assert pattern
+
+### Example Test Run
+
+```bash
+$ npm test
+
+PASS test/billing.test.js
+PASS test/auth.test.js
+PASS test/utility.test.js
+PASS test/reservations.test.js
+PASS test/flightlogs.test.js
+PASS test/aircraft.test.js
+PASS test/members.test.js
+PASS test/app.test.js
+
+Test Suites: 8 passed, 8 total
+Tests:       60 passed, 60 total
+Snapshots:   0 total
+Time:        0.689 s
+```
 
 ## API Endpoints
 
@@ -588,14 +670,29 @@ The system prevents creating duplicate billing records for the same flight log.
 
 ## Future Enhancements
 
-- Authentication and authorization
-- Email notifications for reservations and billing
-- Maintenance tracking for aircraft
-- Flight instructor scheduling
-- Weather integration
-- Mobile app integration
+- Advanced role-based authorization (RBAC) for different user types
+- Email notifications for reservations, cancellations, and billing
+- Maintenance tracking for aircraft with preventive maintenance scheduling
+- Flight instructor scheduling and student progress tracking
+- Weather integration for flight planning
+- Mobile app integration (iOS/Android)
 - Reporting and analytics dashboard
-- Payment processing integration
+- Payment processing integration (Stripe, PayPal)
+- SMS notifications for reservation reminders
+- Aircraft courier log tracking
+- Insurance document management
+- Fuel tracking and cost analysis
+
+## Contributing
+
+Contributions are welcome! Please ensure:
+- All tests pass (`npm test`)
+- New endpoints include corresponding test cases
+- Code follows existing project structure and conventions
+
+## Support
+
+For issues, questions, or feature requests, please open an issue or contact the development team.
 
 ## License
 

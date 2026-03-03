@@ -68,4 +68,19 @@ describe('Auth endpoints', () => {
     expect(res.statusCode).toBe(401);
     expect(res.body).toHaveProperty('message');
   });
+
+  test('GET /api/users/profile returns user profile when authenticated', async () => {
+    const res = await httpRequest(port, '/api/users/profile', 'GET', null, { Authorization: 'Bearer valid-token' });
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toHaveProperty('id', 1);
+    expect(res.body).toHaveProperty('member_number', 'M-1');
+    expect(res.body).toHaveProperty('first_name', 'Auth');
+    expect(res.body).toHaveProperty('email', 'auth@example.com');
+  });
+
+  test('GET /api/users/profile fails without authentication', async () => {
+    const res = await httpRequest(port, '/api/users/profile', 'GET');
+    expect(res.statusCode).toBe(401);
+    expect(res.body).toHaveProperty('message');
+  });
 });

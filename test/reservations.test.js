@@ -12,13 +12,13 @@ jest.mock('pg', () => {
         return Promise.resolve({ rows: [] });
       }
       // GET list
-      if (lt.includes('select r.*') && lt.includes('from reservations')) {
+      if (lt.includes('select r.*') && !lt.includes('where r.id =')) {
         return Promise.resolve({ rows: [
           { id: 1, member_id: 1, aircraft_id: 2, start_time: '2026-02-01T10:00:00Z', end_time: '2026-02-01T11:00:00Z', status: 'booked', notes: 'Initial' }
         ] });
       }
       // GET by id
-      if ((lt.includes('select') && lt.includes('from reservations')) && params && params[0] === 1) {
+      if ((lt.includes('select r.*') && lt.includes('where r.id =')) && params && params[0] === '1') {
         return Promise.resolve({ rows: [{ id: 1, member_id: 1, aircraft_id: 2, start_time: '2026-02-01T10:00:00Z', end_time: '2026-02-01T11:00:00Z', status: 'booked', notes: 'Initial' }] });
       }
       // Insert reservation
@@ -82,29 +82,25 @@ describe('Reservations endpoint', () => {
   beforeAll(() => new Promise((resolve) => { server = app.listen(0, () => { port = server.address().port; resolve(); }); }));
   afterAll(() => new Promise((resolve) => server.close(resolve)));
 
-  test('PUT /api/reservations/:id returns 404 if not found', async () => {
-    const payload = {
-      start_time: '2026-05-01T09:00:00Z',
-      end_time: '2026-05-01T10:00:00Z',
-      status: 'booked',
-      notes: 'Updated reservation'
-    };
-    const res = await httpRequest(port, '/api/reservations/2', 'PUT', payload);
-    expect(res.statusCode).toBe(404);
-    expect(res.body).toHaveProperty('error');
+  test('GET /api/reservations returns a list of reservations', async () => {
+    const res = await httpRequest(port, '/api/reservations');
+    expect(res.statusCode).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBeGreaterThan(0);
+    expect(res.body[0]).toHaveProperty('id');
   });
 
-    test('PUT /api/reservations/:id updates a reservation', async () => {
-    const payload = {
-      start_time: '2026-05-01T09:00:00Z',
-      end_time: '2026-05-01T10:00:00Z',
-      status: 'booked',
-      notes: 'Updated reservation'
-    };
-    const res = await httpRequest(port, '/api/reservations/1', 'PUT', payload);
+  test('GET /api/reservations/:id returns a reservation', async () => {
+    const res = await httpRequest(port, '/api/reservations/1');
     expect(res.statusCode).toBe(200);
-    expect(res.body).toHaveProperty('id', '1');
-    expect(res.body).toHaveProperty('notes', 'Updated reservation');
+    expect(res.body).toHaveProperty('id', 1);
+    expect(res.body).toHaveProperty('member_id', 1);
+  });
+
+  test('GET /api/reservations/:id returns 404 if not found', async () => {
+    const res = await httpRequest(port, '/api/reservations/999');
+    expect(res.statusCode).toBe(404);
+    expect(res.body).toHaveProperty('error');
   });
 
   test('POST /api/reservations creates a new reservation', async () => {
@@ -130,12 +126,29 @@ describe('Reservations endpoint', () => {
     expect(res.body).toHaveProperty('error');
   });
 
-  test('POST /api/reservations creates reservation when no conflict', async () => {
-    const payload = { member_id: 1, aircraft_id: 2, start_time: '2026-02-01T10:00:00Z', end_time: '2026-02-01T11:00:00Z' };
-    const res = await httpRequest(port, '/api/reservations', 'POST', payload);
-    expect(res.statusCode).toBe(201);
-    expect(res.body).toHaveProperty('id');
-    expect(res.body).toHaveProperty('aircraft_id', 2);
+  test('PUT /api/reservations/:id updates a reservation', async () => {
+    const payload = {
+      start_time: '2026-05-01T09:00:00Z',
+      end_time: '2026-05-01T10:00:00Z',
+      status: 'booked',
+      notes: 'Updated reservation'
+    };
+    const res = await httpRequest(port, '/api/reservations/1', 'PUT', payload);
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toHaveProperty('id', '1');
+    expect(res.body).toHaveProperty('notes', 'Updated reservation');
+  });
+
+  test('PUT /api/reservations/:id returns 404 if not found', async () => {
+    const payload = {
+      start_time: '2026-05-01T09:00:00Z',
+      end_time: '2026-05-01T10:00:00Z',
+      status: 'booked',
+      notes: 'Updated reservation'
+    };
+    const res = await httpRequest(port, '/api/reservations/2', 'PUT', payload);
+    expect(res.statusCode).toBe(404);
+    expect(res.body).toHaveProperty('error');
   });
 
   test("DELETE /api/reservations/:id deletes a reservation", async () => {
