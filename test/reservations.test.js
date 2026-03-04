@@ -102,7 +102,7 @@ describe('Reservations endpoint', () => {
   afterAll(() => new Promise((resolve) => server.close(resolve)));
 
   test('GET /api/reservations returns a list of reservations', async () => {
-    const res = await httpRequest(port, '/api/reservations');
+    const res = await httpRequest(port, '/api/reservations', 'GET', null, { Authorization: 'Bearer faketoken' });
     expect(res.statusCode).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
     expect(res.body.length).toBeGreaterThan(0);
@@ -110,14 +110,14 @@ describe('Reservations endpoint', () => {
   });
 
   test('GET /api/reservations/:id returns a reservation', async () => {
-    const res = await httpRequest(port, '/api/reservations/1');
+    const res = await httpRequest(port, '/api/reservations/1', 'GET', null, { Authorization: 'Bearer faketoken' });
     expect(res.statusCode).toBe(200);
     expect(res.body).toHaveProperty('id', 1);
     expect(res.body).toHaveProperty('member_id', 1);
   });
 
   test('GET /api/reservations/:id returns 404 if not found', async () => {
-    const res = await httpRequest(port, '/api/reservations/999');
+    const res = await httpRequest(port, '/api/reservations/999', 'GET', null, { Authorization: 'Bearer faketoken' });
     expect(res.statusCode).toBe(404);
     expect(res.body).toHaveProperty('error');
   });
