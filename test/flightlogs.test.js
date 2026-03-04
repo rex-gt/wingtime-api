@@ -1,9 +1,19 @@
 const http = require('http');
 
+jest.mock('jsonwebtoken', () => ({
+  verify: jest.fn(() => ({ id: 1 }))
+}));
+
 jest.mock('pg', () => {
   const mPool = {
     query: (text, params) => {
       const lt = (text || '').toLowerCase();
+
+      // Auth middleware user lookup
+      if (lt.includes('select id, member_number') && lt.includes('where id = $1')) {
+        return Promise.resolve({ rows: [{ id: 1, member_number: 'M-1', first_name: 'Auth', last_name: 'User', email: 'auth@example.com', role: 'member', is_active: true }] });
+      }
+
       // Get all flight logs
       if (lt.includes('select fl.*,') && !params) {
         return Promise.resolve({ rows: [{ id: 77, reservation_id: 1, member_id: 1, aircraft_id: 2, tach_end: 120 }] });
@@ -73,27 +83,27 @@ describe('Flight logs endpoints', () => {
   afterAll(() => new Promise((resolve) => server.close(resolve)));
 
   test('GET /api/flight-logs returns a list of flight logs', async () => {
-    const res = await httpRequest(port, '/api/flight-logs', 'GET');
+    const res = await httpRequest(port, '/api/flight-logs', 'GET', null, { Authorization: 'Bearer faketoken' });
     expect(res.statusCode).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
   });
       
   test('GET /api/flight-logs/:id returns a flight log', async () => {
-    const res = await httpRequest(port, '/api/flight-logs/77', 'GET');
+    const res = await httpRequest(port, '/api/flight-logs/77', 'GET', null, { Authorization: 'Bearer faketoken' });
     expect(res.statusCode).toBe(200);
     expect(res.body).toHaveProperty('id', 77);
     expect(res.body).toHaveProperty('tach_end', 120);
   });
 
   test('GET /api/flight-logs/:id returns 404 when not found', async () => {
-    const res = await httpRequest(port, '/api/flight-logs/9999', 'GET');
+    const res = await httpRequest(port, '/api/flight-logs/9999', 'GET', null, { Authorization: 'Bearer faketoken' });
     expect(res.statusCode).toBe(404);
     expect(res.body).toHaveProperty('error');
   });
 
   test('POST /api/flight-logs creates a flight log and updates aircraft tach', async () => {
     const payload = { reservation_id: 1, member_id: 1, aircraft_id: 2, tach_start: 100, tach_end: 110, flight_date: '2026-02-02', departure_time: '10:00', arrival_time: '11:00' };
-    const res = await httpRequest(port, '/api/flight-logs', 'POST', payload);
+    const res = await httpRequest(port, '/api/flight-logs', 'POST', payload, { Authorization: 'Bearer faketoken' });
     expect(res.statusCode).toBe(201);
     expect(res.body).toHaveProperty('id');
     expect(res.body).toHaveProperty('tach_end', 110);
@@ -101,7 +111,7 @@ describe('Flight logs endpoints', () => {
 
   test('PUT /api/flight-logs/:id updates a flight log and aircraft tach', async () => {
     const payload = { tach_start: 110, tach_end: 120, flight_date: '2026-02-03', departure_time: '12:00', arrival_time: '13:00' };
-    const res = await httpRequest(port, '/api/flight-logs/77', 'PUT', payload);
+    const res = await httpRequest(port, '/api/flight-logs/77', 'PUT', payload, { Authorization: 'Bearer faketoken' });
     expect(res.statusCode).toBe(200);
     expect(res.body).toHaveProperty('id', 77);
     expect(res.body).toHaveProperty('tach_end', 120);
@@ -109,13 +119,13 @@ describe('Flight logs endpoints', () => {
   
   test('PUT /api/flight-logs/:id returns 404 when not found', async () => {
     const payload = { tach_start: 110, tach_end: 120, flight_date: '2026-02-03', departure_time: '12:00', arrival_time: '13:00' };
-    const res = await httpRequest(port, '/api/flight-logs/9999', 'PUT', payload);
+    const res = await httpRequest(port, '/api/flight-logs/9999', 'PUT', payload, { Authorization: 'Bearer faketoken' });
     expect(res.statusCode).toBe(404);
     expect(res.body).toHaveProperty('error');
   });
 
   test('DELETE /api/flight-logs/:id deletes a flight log', async () => {
-    const res = await httpRequest(port, '/api/flight-logs/77', 'DELETE');
+    const res = await httpRequest(port, '/api/flight-logs/77', 'DELETE', null, { Authorization: 'Bearer faketoken' });
     expect(res.statusCode).toBe(200);
     expect(res.body).toHaveProperty('message');
     expect(res.body).toHaveProperty('flight_log');
@@ -123,7 +133,7 @@ describe('Flight logs endpoints', () => {
   });
 
   test('DELETE /api/flight-logs/:id returns 404 when not found', async () => {
-    const res = await httpRequest(port, '/api/flight-logs/9999', 'DELETE');
+    const res = await httpRequest(port, '/api/flight-logs/9999', 'DELETE', null, { Authorization: 'Bearer faketoken' });
     expect(res.statusCode).toBe(404);
     expect(res.body).toHaveProperty('error');
   });

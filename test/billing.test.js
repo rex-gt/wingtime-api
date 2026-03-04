@@ -1,9 +1,18 @@
 const http = require('http');
 
+jest.mock('jsonwebtoken', () => ({
+  verify: jest.fn(() => ({ id: 1 }))
+}));
+
 jest.mock('pg', () => {
   const mPool = {
     query: (text, params) => {
       const lt = (text || '').toLowerCase();
+
+      // Auth middleware user lookup
+      if (lt.includes('select id, member_number') && lt.includes('where id = $1')) {
+        return Promise.resolve({ rows: [{ id: 1, member_number: 'M-1', first_name: 'Auth', last_name: 'User', email: 'auth@example.com', role: 'admin', is_active: true }] });
+      }
       
       // GET /api/billing - list all billing records
       if (lt.includes('select br.*') && !lt.includes('where member_id') && !lt.includes('delete')) {
@@ -135,7 +144,7 @@ describe('Billing endpoints', () => {
 
   describe('GET /api/billing', () => {
     test('returns a list of billing records', async () => {
-      const res = await httpRequest(port, '/api/billing');
+      const res = await httpRequest(port, '/api/billing', 'GET', null, { Authorization: 'Bearer faketoken' });
       expect(res.statusCode).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
       expect(res.body.length).toBeGreaterThan(0);
@@ -145,31 +154,31 @@ describe('Billing endpoints', () => {
     });
 
     test('filters by member_id', async () => {
-      const res = await httpRequest(port, '/api/billing?member_id=1');
+      const res = await httpRequest(port, '/api/billing?member_id=1', 'GET', null, { Authorization: 'Bearer faketoken' });
       expect(res.statusCode).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
     });
 
     test('filters by is_paid', async () => {
-      const res = await httpRequest(port, '/api/billing?is_paid=false');
+      const res = await httpRequest(port, '/api/billing?is_paid=false', 'GET', null, { Authorization: 'Bearer faketoken' });
       expect(res.statusCode).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
     });
 
     test('filters by start_date', async () => {
-      const res = await httpRequest(port, '/api/billing?start_date=2026-01-01');
+      const res = await httpRequest(port, '/api/billing?start_date=2026-01-01', 'GET', null, { Authorization: 'Bearer faketoken' });
       expect(res.statusCode).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
     });
 
     test('filters by end_date', async () => {
-      const res = await httpRequest(port, '/api/billing?end_date=2026-12-31');
+      const res = await httpRequest(port, '/api/billing?end_date=2026-12-31', 'GET', null, { Authorization: 'Bearer faketoken' });
       expect(res.statusCode).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
     });
 
     test('applies multiple filters', async () => {
-      const res = await httpRequest(port, '/api/billing?member_id=1&is_paid=false&start_date=2026-01-01&end_date=2026-12-31');
+      const res = await httpRequest(port, '/api/billing?member_id=1&is_paid=false&start_date=2026-01-01&end_date=2026-12-31', 'GET', null, { Authorization: 'Bearer faketoken' });
       expect(res.statusCode).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
     });
@@ -178,7 +187,7 @@ describe('Billing endpoints', () => {
   describe('POST /api/billing/generate', () => {
     test('creates a billing record from a flight log', async () => {
       const payload = { flight_log_id: 1 };
-      const res = await httpRequest(port, '/api/billing/generate', 'POST', payload);
+      const res = await httpRequest(port, '/api/billing/generate', 'POST', payload, { Authorization: 'Bearer faketoken' });
       expect(res.statusCode).toBe(201);
       expect(res.body).toHaveProperty('id');
       expect(res.body).toHaveProperty('member_id', 1);
@@ -189,7 +198,7 @@ describe('Billing endpoints', () => {
 
     test('returns 404 if flight log not found', async () => {
       const payload = { flight_log_id: 9999 };
-      const res = await httpRequest(port, '/api/billing/generate', 'POST', payload);
+      const res = await httpRequest(port, '/api/billing/generate', 'POST', payload, { Authorization: 'Bearer faketoken' });
       expect(res.statusCode).toBe(404);
       expect(res.body).toHaveProperty('error');
     });
@@ -198,14 +207,14 @@ describe('Billing endpoints', () => {
       // This test validates the business logic in the endpoint
       // The mock returns a log with tach_end, so we expect success
       const payload = { flight_log_id: 1 };
-      const res = await httpRequest(port, '/api/billing/generate', 'POST', payload);
+      const res = await httpRequest(port, '/api/billing/generate', 'POST', payload, { Authorization: 'Bearer faketoken' });
       expect(res.statusCode).toBe(201);
     });
   });
 
   describe('PUT /api/billing/:id/pay', () => {
     test('marks a billing record as paid', async () => {
-      const res = await httpRequest(port, '/api/billing/1/pay', 'PUT', {});
+      const res = await httpRequest(port, '/api/billing/1/pay', 'PUT', {}, { Authorization: 'Bearer faketoken' });
       expect(res.statusCode).toBe(200);
       expect(res.body).toHaveProperty('id', 1);
       expect(res.body).toHaveProperty('is_paid', true);
@@ -213,7 +222,7 @@ describe('Billing endpoints', () => {
     });
 
     test('returns 404 if billing record not found', async () => {
-      const res = await httpRequest(port, '/api/billing/9999/pay', 'PUT', {});
+      const res = await httpRequest(port, '/api/billing/9999/pay', 'PUT', {}, { Authorization: 'Bearer faketoken' });
       expect(res.statusCode).toBe(404);
       expect(res.body).toHaveProperty('error');
     });
@@ -221,7 +230,7 @@ describe('Billing endpoints', () => {
 
   describe('GET /api/billing/summary/:member_id', () => {
     test('returns billing summary for a member', async () => {
-      const res = await httpRequest(port, '/api/billing/summary/1');
+      const res = await httpRequest(port, '/api/billing/summary/1', 'GET', null, { Authorization: 'Bearer faketoken' });
       expect(res.statusCode).toBe(200);
       expect(res.body).toHaveProperty('total_flights');
       expect(res.body).toHaveProperty('total_hours');
@@ -231,7 +240,7 @@ describe('Billing endpoints', () => {
     });
 
     test('returns empty summary for member with no billing', async () => {
-      const res = await httpRequest(port, '/api/billing/summary/9999');
+      const res = await httpRequest(port, '/api/billing/summary/9999', 'GET', null, { Authorization: 'Bearer faketoken' });
       expect(res.statusCode).toBe(200);
       // Should return an object with null/zero values
     });
@@ -239,7 +248,7 @@ describe('Billing endpoints', () => {
 
   describe('DELETE /api/billing/:id', () => {
     test('deletes a billing record', async () => {
-      const res = await httpRequest(port, '/api/billing/1', 'DELETE');
+      const res = await httpRequest(port, '/api/billing/1', 'DELETE', null, { Authorization: 'Bearer faketoken' });
       expect(res.statusCode).toBe(200);
       expect(res.body).toHaveProperty('message');
       expect(res.body).toHaveProperty('billing');
@@ -247,7 +256,7 @@ describe('Billing endpoints', () => {
     });
 
     test('returns 404 if billing record not found', async () => {
-      const res = await httpRequest(port, '/api/billing/9999', 'DELETE');
+      const res = await httpRequest(port, '/api/billing/9999', 'DELETE', null, { Authorization: 'Bearer faketoken' });
       expect(res.statusCode).toBe(404);
       expect(res.body).toHaveProperty('error');
     });
