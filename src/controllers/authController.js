@@ -53,7 +53,7 @@ const registerUser = async (req, res) => {
             `INSERT INTO members (member_number, first_name, last_name, email, phone, password, role)
              VALUES ($1, $2, $3, $4, $5, $6, $7)
              RETURNING *`,
-            [mNumber, first_name, last_name, email, phone || null, hashed, role || 'pilot']
+            [mNumber, first_name, last_name, email, phone || null, hashed, role || 'member']
         );
 
         const user = result.rows[0];
