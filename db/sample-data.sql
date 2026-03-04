@@ -1,6 +1,6 @@
 -- Sample data for Flying Club API
 -- All member passwords are: password123
--- Bcrypt hash (10 rounds): $2b$10$K8Q7Z5Z5Z5Z5Z5Z5Z5Z5ZeK8Q7Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5
+-- Bcrypt hash (10 rounds): $2b$10$koXfd/BvYx1dUgbFslSKq.EprkQZ8TzGa1bJsZMzaMWISv3V2vgYu
 
 -- Clear existing data (in reverse order of dependencies)
 DELETE FROM billing_records;
@@ -18,12 +18,12 @@ ALTER SEQUENCE billing_records_id_seq RESTART WITH 1;
 
 -- Insert sample members with hashed passwords
 -- Password for all users: password123
-INSERT INTO members (member_number, first_name, last_name, email, phone, password) VALUES
-('M001', 'John', 'Doe', 'john.doe@example.com', '555-0100', '$2b$10$rZ1qS8WqXvWxB3xGxF3LHOqYJ9gZvN.1YqP9zGvF3LHOKJYn9yqe'),
-('M002', 'Jane', 'Smith', 'jane.smith@example.com', '555-0101', '$2b$10$rZ1qS8WqXvWxB3xGxF3LHOqYJ9gZvN.1YqP9zGvF3LHOKJYn9yqe'),
-('M003', 'Bob', 'Johnson', 'bob.johnson@example.com', '555-0102', '$2b$10$rZ1qS8WqXvWxB3xGxF3LHOqYJ9gZvN.1YqP9zGvF3LHOKJYn9yqe'),
-('M004', 'Alice', 'Williams', 'alice.williams@example.com', '555-0103', '$2b$10$rZ1qS8WqXvWxB3xGxF3LHOqYJ9gZvN.1YqP9zGvF3LHOKJYn9yqe'),
-('M005', 'Charlie', 'Brown', 'charlie.brown@example.com', '555-0104', '$2b$10$rZ1qS8WqXvWxB3xGxF3LHOqYJ9gZvN.1YqP9zGvF3LHOKJYn9yqe');
+INSERT INTO members (member_number, first_name, last_name, email, phone, password, role) VALUES
+('M001', 'John', 'Doe', 'john.doe@example.com', '555-0100', '$2b$10$koXfd/BvYx1dUgbFslSKq.EprkQZ8TzGa1bJsZMzaMWISv3V2vgYu', 'admin'),
+('M002', 'Jane', 'Smith', 'jane.smith@example.com', '555-0101', '$2b$10$koXfd/BvYx1dUgbFslSKq.EprkQZ8TzGa1bJsZMzaMWISv3V2vgYu', 'operator'),
+('M003', 'Bob', 'Johnson', 'bob.johnson@example.com', '555-0102', '$2b$10$koXfd/BvYx1dUgbFslSKq.EprkQZ8TzGa1bJsZMzaMWISv3V2vgYu', 'member'),
+('M004', 'Alice', 'Williams', 'alice.williams@example.com', '555-0103', '$2b$10$koXfd/BvYx1dUgbFslSKq.EprkQZ8TzGa1bJsZMzaMWISv3V2vgYu', 'member'),
+('M005', 'Charlie', 'Brown', 'charlie.brown@example.com', '555-0104', '$2b$10$koXfd/BvYx1dUgbFslSKq.EprkQZ8TzGa1bJsZMzaMWISv3V2vgYu', 'member');
 
 -- Insert sample aircraft
 INSERT INTO aircraft (tail_number, make, model, year, hourly_rate, current_tach_hours) VALUES
