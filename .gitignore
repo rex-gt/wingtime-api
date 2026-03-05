@@ -29,3 +29,5 @@ pids/
 *.pid.lock
 # Test coverage
 coverage/
+server.crt
+server.key
