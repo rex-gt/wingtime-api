@@ -16,11 +16,24 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
   : ['http://localhost:5173', 'http://localhost:4200'];
 
+function isOriginAllowed(origin) {
+  // Exact match
+  if (allowedOrigins.includes(origin)) return true;
+  // Wildcard pattern match, e.g. "*.vercel.app" or "*.railway.app"
+  for (const allowed of allowedOrigins) {
+    if (allowed.startsWith('*.')) {
+      const suffix = allowed.slice(1); // e.g. ".vercel.app"
+      if (origin.endsWith(suffix)) return true;
+    }
+  }
+  return false;
+}
+
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (e.g. curl, Postman, server-to-server)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
+    if (isOriginAllowed(origin)) return callback(null, true);
     const err = new Error(`CORS: origin '${origin}' not allowed`);
     err.status = 403;
     callback(err);
