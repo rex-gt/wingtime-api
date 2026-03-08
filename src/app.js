@@ -12,12 +12,17 @@ const bodyParser = require('body-parser');
 const app = express();
 const cors = require('cors');
 
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+  : ['http://localhost:5173', 'http://localhost:4200'];
+
 app.use(cors({
-  origin: [
-    'https://localhost:5173',        // Vite development server (HTTPS)
-    'https://localhost:4200',        // Alternative development port (HTTPS)
-    'https://aviation-club-scheduler.vercel.app' // For Vercel deployment
-  ],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (e.g. curl, Postman, server-to-server)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: origin '${origin}' not allowed`));
+  },
   credentials: true
 }));
 
