@@ -21,10 +21,20 @@ app.use(cors({
     // Allow requests with no origin (e.g. curl, Postman, server-to-server)
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
-    callback(new Error(`CORS: origin '${origin}' not allowed`));
+    const err = new Error(`CORS: origin '${origin}' not allowed`);
+    err.status = 403;
+    callback(err);
   },
   credentials: true
 }));
+
+// Handle CORS errors before other middleware
+app.use((err, req, res, next) => {
+  if (err.status === 403 && err.message.startsWith('CORS:')) {
+    return res.status(403).json({ error: 'Forbidden', message: err.message });
+  }
+  next(err);
+});
 
 // Middleware
 app.use(express.json());
