@@ -53,7 +53,7 @@ const registerUser = async (req, res) => {
             `INSERT INTO members (member_number, first_name, last_name, email, phone, password, role)
              VALUES ($1, $2, $3, $4, $5, $6, $7)
              RETURNING *`,
-            [mNumber, first_name, last_name, email, phone || null, hashed, role || 'pilot']
+            [mNumber, first_name, last_name, email, phone || null, hashed, role || 'member']
         );
 
         const user = result.rows[0];
@@ -87,4 +87,84 @@ const getProfile = async (req, res) => {
     }
 };
 
-module.exports = { loginUser, registerUser, getProfile };
+const updateProfile = async (req, res) => {
+    try {
+        const userId = req.user && req.user.id;
+        if (!userId) return res.status(401).json({ message: 'Not authorized' });
+
+        const { first_name, last_name, email, phone, current_password, new_password } = req.body;
+
+        // Validate required fields
+        if (!first_name || !last_name || !email) {
+            return res.status(400).json({ message: 'Missing required fields' });
+        }
+
+        // Check if email is already taken by another user
+        if (email) {
+            const emailCheck = await pool.query('SELECT id FROM members WHERE email = $1 AND id != $2', [email, userId]);
+            if (emailCheck.rows.length > 0) {
+                return res.status(409).json({ message: 'Email is already in use' });
+            }
+        }
+
+        // If updating password, verify current password
+        let hashedPassword = null;
+        if (new_password) {
+            if (!current_password) {
+                return res.status(400).json({ message: 'Current password is required to change password' });
+            }
+
+            const userResult = await pool.query('SELECT password FROM members WHERE id = $1', [userId]);
+            const user = userResult.rows[0];
+
+            if (!user) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+
+            const isMatch = await bcrypt.compare(current_password, user.password);
+            if (!isMatch) {
+                return res.status(401).json({ message: 'Current password is incorrect' });
+            }
+
+            hashedPassword = await bcrypt.hash(new_password, 10);
+        }
+
+        // Build update query dynamically
+        let updateFields = ['first_name = $1', 'last_name = $2', 'email = $3', 'phone = $4'];
+        let params = [first_name, last_name, email, phone || null];
+
+        if (hashedPassword) {
+            updateFields.push(`password = $${params.length + 1}`);
+            params.push(hashedPassword);
+        }
+
+        params.push(userId);
+        const userIndex = params.length;
+
+        const query = `
+            UPDATE members 
+            SET ${updateFields.join(', ')}
+            WHERE id = $${userIndex}
+            RETURNING id, member_number, first_name, last_name, email, phone, role, is_active, created_at
+        `;
+
+        const result = await pool.query(query, params);
+        
+        if (!result.rows[0]) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const updatedUser = result.rows[0];
+
+        res.json({
+            message: 'Profile updated successfully',
+            user: updatedUser
+        });
+    } catch (err) {
+        console.error('Profile update error:', err.message);
+        console.error('Error details:', err);
+        res.status(500).json({ message: 'Server error', error: err.message });
+    }
+};
+
+module.exports = { loginUser, registerUser, getProfile, updateProfile };

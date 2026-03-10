@@ -9,7 +9,7 @@ CREATE TABLE members (
     email VARCHAR(255) UNIQUE NOT NULL,
     phone VARCHAR(20),
     password VARCHAR(255) NOT NULL, -- Store hashed passwords
-    role VARCHAR(20) DEFAULT 'pilot',
+    role VARCHAR(20) DEFAULT 'member' CHECK (role IN ('admin', 'operator', 'member')),
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

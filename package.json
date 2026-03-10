@@ -1,7 +1,7 @@
 {
-  "name": "flying-club-api",
+  "name": "wingtime-api",
   "version": "1.0.0",
-  "description": "Backend API for Flying Club Scheduling System",
+  "description": "Backend API for WingTime Flight Management System",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

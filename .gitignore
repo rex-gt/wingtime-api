@@ -27,3 +27,7 @@ pids/
 *.pid
 *.seed
 *.pid.lock
+# Test coverage
+coverage/
+server.crt
+server.key

@@ -62,7 +62,12 @@ const getReservationById = async (req, res) => {
 };
 
 const createReservation = async (req, res) => {
-  const { member_id, aircraft_id, start_time, end_time, notes } = req.body;
+  let { member_id, aircraft_id, start_time, end_time, notes } = req.body;
+
+  if (req.user && req.user.role === 'member') {
+    member_id = req.user.id;
+  }
+
   const conflictCheck = await pool.query(
     `SELECT id FROM reservations
      WHERE aircraft_id = $1
@@ -92,6 +97,17 @@ const createReservation = async (req, res) => {
 const updateReservation = async (req, res) => {
   const { id } = req.params;
   const { start_time, end_time, status, notes } = req.body;
+
+  if (req.user && req.user.role === 'member') {
+    const check = await pool.query('SELECT member_id FROM reservations WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Reservation not found' });
+    }
+    if (check.rows[0].member_id !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden: you can only update your own reservations' });
+    }
+  }
+
   const result = await pool.query(
     `UPDATE reservations
      SET start_time = $1, end_time = $2, status = $3, notes = $4
@@ -107,6 +123,17 @@ const updateReservation = async (req, res) => {
 
 const deleteReservation = async (req, res) => {
   const { id } = req.params;
+
+  if (req.user && req.user.role === 'member') {
+    const check = await pool.query('SELECT member_id FROM reservations WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Reservation not found' });
+    }
+    if (check.rows[0].member_id !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden: you can only delete your own reservations' });
+    }
+  }
+
   const result = await pool.query(
     'DELETE FROM reservations WHERE id = $1 RETURNING *',
     [id]

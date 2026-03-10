@@ -37,9 +37,9 @@ jest.mock('pg', () => {
         return Promise.resolve({ rows: [{ id: 2, member_number: params[0], first_name: params[1], last_name: params[2], email: params[3], phone: params[4] }] });
       }
 
-      // Update member
+      // Update member (admin: 7 params [fn,ln,email,phone,is_active,role,id]; member: 5 params [fn,ln,email,phone,id])
       if (lt.includes('update members')) {
-        const id = params && params[5];
+        const id = params && (params[6] !== undefined ? params[6] : params[4]);
         return Promise.resolve({ rows: [{ id, member_number: 'M-1', first_name: params[0], last_name: params[1], email: params[2], phone: params[3], is_active: params[4] }] });
       }
 
