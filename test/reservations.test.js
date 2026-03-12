@@ -124,7 +124,7 @@ describe('Reservations endpoint', () => {
 
   test('POST /api/reservations creates a new reservation', async () => {
     const payload = {
-      member_id: 2,
+      member_id: 1,
       aircraft_id: 3,
       start_time: '2026-04-01T09:00:00Z',
       end_time: '2026-04-01T10:00:00Z',

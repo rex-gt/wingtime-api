@@ -65,6 +65,9 @@ const createReservation = async (req, res) => {
   let { member_id, aircraft_id, start_time, end_time, notes } = req.body;
 
   if (req.user && req.user.role === 'member') {
+    if (member_id !== undefined && member_id !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden: members can only create reservations for themselves' });
+    }
     member_id = req.user.id;
   }
 
