@@ -80,33 +80,42 @@ const updateMember = async (req, res) => {
         return res.status(403).json({ error: 'Forbidden: you can only update your own profile' });
     }
 
-    if (req.user.role === 'admin') {
-        const { first_name, last_name, email, phone, is_active, role } = req.body;
-        const result = await pool.query(
-            `UPDATE members
-             SET first_name = $1, last_name = $2, email = $3, phone = $4, is_active = $5, role = $6
-             WHERE id = $7
-             RETURNING *`,
-            [first_name, last_name, email, phone, is_active, role, targetId]
-        );
+    // Build dynamic UPDATE query based on provided fields
+    const updates = [];
+    const values = [];
+    let paramCount = 1;
+
+    // Define which fields each role can update
+    const allowedAdminFields = ['first_name', 'last_name', 'email', 'phone', 'is_active', 'role'];
+    const allowedMemberFields = ['first_name', 'last_name', 'email', 'phone'];
+    const allowedFields = req.user.role === 'admin' ? allowedAdminFields : allowedMemberFields;
+
+    // Build the update query dynamically
+    for (const field of allowedFields) {
+        if (field in req.body && req.body[field] !== undefined) {
+            updates.push(`${field} = $${paramCount}`);
+            values.push(req.body[field]);
+            paramCount++;
+        }
+    }
+
+    if (updates.length === 0) {
+        return res.status(400).json({ error: 'No valid fields provided for update' });
+    }
+
+    values.push(targetId);
+    const query = `UPDATE members SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`;
+
+    try {
+        const result = await pool.query(query, values);
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Member not found' });
         }
         return res.json(result.rows[0]);
+    } catch (err) {
+        console.error('Update member error:', err);
+        res.status(500).json({ error: 'Failed to update member' });
     }
-
-    const { first_name, last_name, email, phone } = req.body;
-    const result = await pool.query(
-        `UPDATE members
-         SET first_name = $1, last_name = $2, email = $3, phone = $4
-         WHERE id = $5
-         RETURNING *`,
-        [first_name, last_name, email, phone, targetId]
-    );
-    if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Member not found' });
-    }
-    return res.json(result.rows[0]);
 };
 
 const deleteMember = async (req, res) => {
