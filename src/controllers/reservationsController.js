@@ -68,15 +68,21 @@ const createReservation = async (req, res) => {
     member_id = req.user.id;
   }
 
+  // Check if aircraft is available
+  const aircraftCheck = await pool.query('SELECT is_available FROM aircraft WHERE id = $1', [aircraft_id]);
+  if (aircraftCheck.rows.length === 0) {
+    return res.status(404).json({ error: 'Aircraft not found' });
+  }
+  if (!aircraftCheck.rows[0].is_available) {
+    return res.status(409).json({ error: 'Aircraft is not available for reservations' });
+  }
+
   const conflictCheck = await pool.query(
     `SELECT id FROM reservations
      WHERE aircraft_id = $1
      AND status NOT IN ('cancelled', 'completed')
-     AND (
-       (start_time <= $2 AND end_time > $2) OR
-       (start_time < $3 AND end_time >= $3) OR
-       (start_time >= $2 AND end_time <= $3)
-     )`,
+     AND start_time < $3
+     AND end_time > $2`,
     [aircraft_id, start_time, end_time]
   );
   if (conflictCheck.rows.length > 0) {
@@ -96,7 +102,7 @@ const createReservation = async (req, res) => {
 
 const updateReservation = async (req, res) => {
   const { id } = req.params;
-  const { start_time, end_time, status, notes } = req.body;
+  const { start_time, end_time, status, notes, aircraft_id } = req.body;
 
   if (req.user && req.user.role === 'member') {
     const check = await pool.query('SELECT member_id FROM reservations WHERE id = $1', [id]);
@@ -108,12 +114,51 @@ const updateReservation = async (req, res) => {
     }
   }
 
+  // If aircraft_id or time is being changed, check for conflicts
+  if (aircraft_id || start_time || end_time) {
+    const currentRes = await pool.query('SELECT aircraft_id, start_time, end_time FROM reservations WHERE id = $1', [id]);
+    if (currentRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Reservation not found' });
+    }
+    const current = currentRes.rows[0];
+    const newAircraftId = aircraft_id || current.aircraft_id;
+    const newStartTime = start_time || current.start_time;
+    const newEndTime = end_time || current.end_time;
+
+    // Check if new aircraft is available
+    if (aircraft_id) {
+      const aircraftCheck = await pool.query('SELECT is_available FROM aircraft WHERE id = $1', [aircraft_id]);
+      if (aircraftCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Aircraft not found' });
+      }
+      if (!aircraftCheck.rows[0].is_available) {
+        return res.status(409).json({ error: 'Aircraft is not available for reservations' });
+      }
+    }
+
+    const conflictCheck = await pool.query(
+      `SELECT id FROM reservations
+       WHERE aircraft_id = $1
+       AND status NOT IN ('cancelled', 'completed')
+       AND id != $2
+       AND start_time < $4
+       AND end_time > $3`,
+      [newAircraftId, id, newStartTime, newEndTime]
+    );
+    if (conflictCheck.rows.length > 0) {
+      return res.status(409).json({
+        error: 'Time conflict with existing reservation',
+        conflicting_reservation_id: conflictCheck.rows[0].id
+      });
+    }
+  }
+
   const result = await pool.query(
     `UPDATE reservations
-     SET start_time = $1, end_time = $2, status = $3, notes = $4
-     WHERE id = $5
+     SET start_time = COALESCE($1, start_time), end_time = COALESCE($2, end_time), status = COALESCE($3, status), notes = COALESCE($4, notes), aircraft_id = COALESCE($5, aircraft_id)
+     WHERE id = $6
      RETURNING *`,
-    [start_time, end_time, status, notes, id]
+    [start_time, end_time, status, notes, aircraft_id, id]
   );
   if (result.rows.length === 0) {
     return res.status(404).json({ error: 'Reservation not found' });
