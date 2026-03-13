@@ -15,7 +15,7 @@ const createTransporter = () => {
 };
 
 const sendWelcomeEmail = async (user) => {
-    const appUrl = process.env.APP_URL || 'http://localhost:3000';
+    const appUrl = process.env.APP_URL || 'https://localhost:5173';
     const resetSecret = process.env.RESET_TOKEN_SECRET || process.env.JWT_SECRET;
     const resetToken = jwt.sign(
         { id: user.id, purpose: 'password-reset' },

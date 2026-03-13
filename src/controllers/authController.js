@@ -145,14 +145,14 @@ const updateProfile = async (req, res) => {
         const userIndex = params.length;
 
         const query = `
-            UPDATE members 
+            UPDATE members
             SET ${updateFields.join(', ')}
             WHERE id = $${userIndex}
             RETURNING id, member_number, first_name, last_name, email, phone, role, is_active, created_at
         `;
 
         const result = await pool.query(query, params);
-        
+
         if (!result.rows[0]) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -170,4 +170,48 @@ const updateProfile = async (req, res) => {
     }
 };
 
-module.exports = { loginUser, registerUser, getProfile, updateProfile };
+const resetPassword = async (req, res) => {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+        return res.status(400).json({ message: 'Token and password are required' });
+    }
+
+    try {
+        // Verify the reset token
+        const resetSecret = process.env.RESET_TOKEN_SECRET || process.env.JWT_SECRET;
+        const decoded = jwt.verify(token, resetSecret);
+
+        // Check if the token has the correct purpose
+        if (decoded.purpose !== 'password-reset') {
+            return res.status(400).json({ message: 'Invalid reset token' });
+        }
+
+        const userId = decoded.id;
+
+        // Check if user exists
+        const userResult = await pool.query('SELECT id FROM members WHERE id = $1', [userId]);
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Hash the new password
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Update the password
+        await pool.query('UPDATE members SET password = $1 WHERE id = $2', [hashedPassword, userId]);
+
+        res.json({ message: 'Password reset successfully' });
+    } catch (err) {
+        if (err.name === 'TokenExpiredError') {
+            return res.status(400).json({ message: 'Reset token has expired. Please request a new one.' });
+        }
+        if (err.name === 'JsonWebTokenError') {
+            return res.status(400).json({ message: 'Invalid reset token' });
+        }
+        console.error('Password reset error:', err);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+module.exports = { loginUser, registerUser, getProfile, updateProfile, resetPassword };

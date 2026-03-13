@@ -2,7 +2,20 @@ const http = require('http');
 
 jest.mock('jsonwebtoken', () => ({
   sign: jest.fn(() => 'signed-token'),
-  verify: jest.fn(() => ({ id: 1 }))
+  verify: jest.fn((token) => {
+    if (token === 'valid-reset-token') {
+      return { id: 1, purpose: 'password-reset' };
+    }
+    if (token === 'expired-token') {
+      const err = new Error('jwt expired');
+      err.name = 'TokenExpiredError';
+      throw err;
+    }
+    if (token === 'invalid-purpose-token') {
+      return { id: 1, purpose: 'other' };
+    }
+    return { id: 1 };
+  })
 }));
 
 jest.mock('pg', () => {
@@ -33,6 +46,9 @@ jest.mock('pg', () => {
       }
       if (lt.includes('select id, member_number') && lt.includes('where id = $1')) {
         return Promise.resolve({ rows: [{ id: 1, member_number: 'M-1', first_name: 'Auth', last_name: 'User', email: 'auth@example.com', role: 'admin', is_active: true }] });
+      }
+      if (lt.includes('select id from members where id')) {
+        return Promise.resolve({ rows: [{ id: 1 }] });
       }
       if (lt.includes('select password from members where id')) {
         return Promise.resolve({ rows: [{ password: '$2a$10$N9qo8uLOickgx2ZMRZoMye' }] });
@@ -293,5 +309,53 @@ describe('Auth endpoints', () => {
     const res = await httpRequest(port, '/api/users/profile', 'PUT', payload, { Authorization: 'Bearer valid-token' });
     expect(res.statusCode).toBe(401);
     expect(res.body).toHaveProperty('message', 'Current password is incorrect');
+  });
+
+  test('POST /api/users/reset-password resets password with valid token', async () => {
+    const payload = {
+      token: 'valid-reset-token',
+      password: 'newpassword123'
+    };
+    const res = await httpRequest(port, '/api/users/reset-password', 'POST', payload);
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toHaveProperty('message', 'Password reset successfully');
+  });
+
+  test('POST /api/users/reset-password fails without token', async () => {
+    const payload = {
+      password: 'newpassword123'
+    };
+    const res = await httpRequest(port, '/api/users/reset-password', 'POST', payload);
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toHaveProperty('message', 'Token and password are required');
+  });
+
+  test('POST /api/users/reset-password fails without password', async () => {
+    const payload = {
+      token: 'valid-reset-token'
+    };
+    const res = await httpRequest(port, '/api/users/reset-password', 'POST', payload);
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toHaveProperty('message', 'Token and password are required');
+  });
+
+  test('POST /api/users/reset-password fails with expired token', async () => {
+    const payload = {
+      token: 'expired-token',
+      password: 'newpassword123'
+    };
+    const res = await httpRequest(port, '/api/users/reset-password', 'POST', payload);
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toHaveProperty('message', 'Reset token has expired. Please request a new one.');
+  });
+
+  test('POST /api/users/reset-password fails with invalid purpose token', async () => {
+    const payload = {
+      token: 'invalid-purpose-token',
+      password: 'newpassword123'
+    };
+    const res = await httpRequest(port, '/api/users/reset-password', 'POST', payload);
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toHaveProperty('message', 'Invalid reset token');
   });
 });
