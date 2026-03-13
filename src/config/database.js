@@ -28,7 +28,9 @@ const pool = new Pool(
         host: process.env.DB_HOST || 'localhost',
         database: process.env.DB_NAME || 'flying_club',
         password: process.env.DB_PASSWORD || 'password',
-        port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 5432
+        port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 5432,
+        // Force password authentication method to avoid trust auth issues
+        sslmode: 'disable'
       }
 );
 

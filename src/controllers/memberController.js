@@ -1,5 +1,6 @@
 const pool = require('../config/database');
 const bcrypt = require('bcryptjs');
+const { sendWelcomeEmail } = require('../services/emailService');
 
 const getMembers = async (req, res) => {
     const result = await pool.query(
@@ -51,6 +52,9 @@ const createMember = async (req, res) => {
         );
 
         const newMember = result.rows[0];
+
+        sendWelcomeEmail(newMember).catch((err) => console.error('Failed to send welcome email:', err));
+
         res.status(201).json({
             id: newMember.id,
             member_number: newMember.member_number,

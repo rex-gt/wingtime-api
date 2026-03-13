@@ -5,6 +5,7 @@ let mockUserRole = 'member';
 let mockUserId = 1;
 
 jest.mock('jsonwebtoken', () => ({
+  sign: jest.fn(() => 'signed-token'),
   verify: jest.fn(() => ({ id: mockUserId }))
 }));
 
@@ -16,6 +17,20 @@ jest.mock('pg', () => {
       // Auth middleware user lookup
       if (lt.includes('select id, member_number') && lt.includes('where id = $1')) {
         return Promise.resolve({ rows: [{ id: mockUserId, member_number: 'M-1', first_name: 'Test', last_name: 'User', email: 'test@example.com', role: mockUserRole, is_active: true }] });
+      }
+
+      // Aircraft availability check (for createReservation and updateReservation)
+      if (lt.includes('select is_available from aircraft where id')) {
+        return Promise.resolve({ rows: [{ is_available: true }] });
+      }
+
+      // Current reservation lookup for update (aircraft_id, start_time, end_time)
+      if (lt.includes('select aircraft_id, start_time, end_time from reservations where id')) {
+        const id = params && params[0];
+        if (id === '1') {
+          return Promise.resolve({ rows: [{ aircraft_id: 2, start_time: '2026-02-01T10:00:00Z', end_time: '2026-02-01T11:00:00Z' }] });
+        }
+        return Promise.resolve({ rows: [] });
       }
 
       // Ownership check for reservation update/delete
@@ -87,9 +102,9 @@ jest.mock('pg', () => {
 
       // Update reservation
       if (lt.includes('update reservations')) {
-        const id = params && params[4];
+        const id = params && params[5];
         if (id === '1') {
-          return Promise.resolve({ rows: [{ id, member_id: 1, start_time: params[0], end_time: params[1], status: params[2], notes: params[3] }] });
+          return Promise.resolve({ rows: [{ id, member_id: 1, aircraft_id: params[4] || 2, start_time: params[0], end_time: params[1], status: params[2], notes: params[3] }] });
         }
         return Promise.resolve({ rows: [] });
       }
@@ -112,8 +127,12 @@ jest.mock('pg', () => {
       return Promise.resolve({ rows: [] });
     }
   };
-  return { Pool: jest.fn(() => mPool) };
+  return { Pool: jest.fn(() => mPool), types: { setTypeParser: jest.fn() } };
 });
+
+jest.mock('nodemailer', () => ({
+  createTransport: jest.fn(() => ({ sendMail: jest.fn(() => Promise.resolve()) }))
+}));
 
 const app = require('../src/index');
 

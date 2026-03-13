@@ -29,21 +29,23 @@ wingtime-api/
 │   │   ├── reservationsRoutes.js
 │   │   ├── userRoutes.js
 │   │   └── utilityRoutes.js
+│   ├── services/                # Utility services
+│   │   └── emailService.js      # Email service for welcome emails
 │   └── utils/                   # Utility functions (for future use)
 ├── db/
 │   ├── schema.sql               # Complete database schema with indexes and triggers
 │   └── sample-data.sql          # Sample data for testing
 ├── test/                        # Comprehensive test suite
+│   ├── emailService.test.js     # Email service tests (12 tests)
+│   ├── auth.test.js             # Authentication tests (29 tests)
 │   ├── aircraft.test.js         # Aircraft endpoint tests (6 tests)
 │   ├── app.test.js              # API smoke tests (2 tests)
-│   ├── auth.test.js             # Authentication tests (16 tests)
 │   ├── billing.test.js          # Billing endpoint tests (15 tests)
 │   ├── flightlogs.test.js       # Flight logs tests (8 tests)
 │   ├── members.test.js          # Members endpoint tests (5 tests)
 │   ├── reservations.test.js     # Reservations endpoint tests (8 tests)
 │   ├── roles.test.js            # Role-based access control tests (21 tests)
-│   ├── smoke-test.sh            # Live server integration tests (29 tests)
-│   └── utility.test.js          # Utility endpoint tests (12 tests)
+│   ├── utility.test.js          # Utility endpoint tests (12 tests)
 ├── index.js                     # Application entry point (HTTP/HTTPS server)
 ├── package.json                 # Dependencies and scripts
 ├── .env.example                 # Environment variables template
@@ -62,7 +64,10 @@ wingtime-api/
 - **Role-Based Access Control (RBAC)**: Three user roles (Admin, Operator, Member) with enforced permissions
 - **HTTPS Support**: Optional SSL/TLS encryption with configurable certificates
 - **Protected Endpoints**: All API endpoints require authentication and role authorization
-- **Comprehensive Testing**: 93 unit tests across 9 test suites plus 29 live server integration tests
+- **Welcome Email Service**: Automated welcome emails with password reset links for new members
+- **Password Reset Flow**: Complete token-based password reset via email links
+- **User Profile Management**: Update profile information, change password with verification
+- **Comprehensive Testing**: 126 unit tests across 10 test suites plus 29 live server integration tests
 - **Clean Architecture**: Modular design with separation of concerns
 
 ## Architecture
@@ -82,6 +87,7 @@ The project follows a clean, modular architecture with proper separation of conc
 - `app.js` - Express app setup: CORS, middleware, and route mounting
 - 7 controller files - Each handling a specific business domain
 - 7 route files - Endpoint definitions with `asyncHandler` wrapper and role guards
+- `src/services/emailService.js` - Email service for welcome emails and notifications
 - Centralized error handling and database configuration
 
 ### Benefits
@@ -157,6 +163,20 @@ DATABASE_URL=postgresql://user:pass@host:5432/dbname
 # Auth
 JWT_SECRET=your_jwt_secret_here
 
+# Email/SMTP Configuration (for welcome emails)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+SMTP_FROM=noreply@wingtime.app
+SMTP_SECURE=false
+
+# Optional: Separate secret for password reset tokens
+# RESET_TOKEN_SECRET=your_reset_token_secret_here
+
+# Optional: App URL for email links (for frontend app redirects)
+# APP_URL=https://wingtime.vercel.app
+
 # CORS – comma-separated list; supports wildcard patterns like *.vercel.app
 # ALLOWED_ORIGINS=http://localhost:5173,https://wingtime.vercel.app
 
@@ -182,6 +202,7 @@ All endpoints require a valid JWT (`Authorization: Bearer <token>`). Role requir
 |----------|--------|---------------|
 | `/api/users/register` | POST | Public |
 | `/api/users/login` | POST | Public |
+| `/api/users/reset-password` | POST | Public |
 | `/api/users/profile` | GET / PUT | Any authenticated |
 | `/api/members` | GET | admin, operator |
 | `/api/members/:id` | GET | Any authenticated |
@@ -195,24 +216,97 @@ All endpoints require a valid JWT (`Authorization: Bearer <token>`). Role requir
 | `/api/flight-logs` | All | Any authenticated |
 | `/api/billing` | All | Any authenticated |
 
+## Email Service
+
+The API includes an automated email service that sends welcome emails to newly registered members. This feature helps with member onboarding and provides a secure password setup link.
+
+### Welcome Email Flow
+
+1. **User Registration**: When a new member registers or is created by an admin
+2. **Email Generation**: A welcome email is automatically generated with:
+   - Personalized greeting with the member's name
+   - Secure password setup link with JWT token
+   - 24-hour token expiration notice
+   - Security disclaimer for account protection
+3. **Email Delivery**: The email is sent asynchronously (fire-and-forget), so registration completes immediately
+4. **Password Reset Link**: The email contains a unique token-based link for the member to set/reset their password
+
+### SMTP Configuration
+
+To enable the email service, configure the following environment variables:
+
+```env
+# SMTP Server (Gmail, Office 365, custom server, etc.)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+
+# Sender configuration
+SMTP_FROM=noreply@wingtime.app
+SMTP_SECURE=false  # Set to 'true' for port 465 (implicit TLS)
+
+# Optional: Use a different secret for password reset tokens
+# If not set, JWT_SECRET is used
+RESET_TOKEN_SECRET=your_reset_token_secret_here
+
+# Optional: App URL for email links (for frontend app redirects)
+APP_URL=https://wingtime.app
+```
+
+### Gmail Configuration (Recommended)
+
+To use Gmail with this API:
+
+1. Enable 2-Factor Authentication on your Gmail account
+2. Generate an [App Password](https://support.google.com/accounts/answer/185833)
+3. Use the generated 16-character password as `SMTP_PASS`
+4. Set `SMTP_HOST=smtp.gmail.com` and `SMTP_PORT=587`
+
+### Email Service Details
+
+- **Location**: `src/services/emailService.js`
+- **Exported Function**: `sendWelcomeEmail(user)`
+- **Token Expiration**: 24 hours
+- **Error Handling**: Email failures are logged but don't prevent user registration (non-blocking)
+
+### Testing Email Service
+
+The email service includes comprehensive test coverage (12 tests):
+
+```bash
+npm test -- emailService.test.js
+```
+
+Tests cover:
+- Email structure and recipient validation
+- Personalized greetings
+- Password reset link generation
+- JWT token payload and configuration
+- SMTP transporter configuration
+- Multiple SMTP backends (Gmail, custom servers, etc.)
+- Environment variable overrides
+- Error handling for failed email sends
+
 ## Testing
 
 ### Test Coverage
 
-The project includes comprehensive test coverage with **93 unit tests** across **9 test suites**, covering **100% of all endpoints**:
+The project includes comprehensive test coverage with **126 unit tests** across **10 test suites**, covering **100% of all endpoints**:
 
 | Test Suite | Tests | Coverage |
 |-----------|-------|----------|
+| emailService.test.js | 12 | Email service, SMTP config, token generation |
+| auth.test.js | 29 | Registration, Login, Profile, Updates, Password change, Password reset, Welcome email |
 | aircraft.test.js | 6 | Aircraft CRUD, Availability |
 | app.test.js | 2 | API Smoke Tests |
-| auth.test.js | 16 | Registration, Login, Profile, Validation, Errors |
 | billing.test.js | 15 | Billing CRUD, Generation, Summary |
 | flightlogs.test.js | 8 | Flight Logs CRUD, Filtering |
 | members.test.js | 5 | Members CRUD |
 | reservations.test.js | 8 | Reservations CRUD, Conflict Detection |
 | roles.test.js | 21 | Role-Based Access Control (admin/operator/member) |
 | utility.test.js | 12 | Aircraft Availability Utility |
-| **TOTAL** | **93** | **31 Endpoints** |
+| **TOTAL** | **126** | **35 Endpoints + Email Service** |
 
 ### Running Tests
 
@@ -245,6 +339,7 @@ npm test -- --coverage
 ```bash
 $ npm test
 
+PASS test/emailService.test.js
 PASS test/billing.test.js
 PASS test/auth.test.js
 PASS test/roles.test.js
@@ -255,10 +350,10 @@ PASS test/aircraft.test.js
 PASS test/members.test.js
 PASS test/app.test.js
 
-Test Suites: 9 passed, 9 total
-Tests:       93 passed, 93 total
+Test Suites: 10 passed, 10 total
+Tests:       126 passed, 126 total
 Snapshots:   0 total
-Time:        0.689 s
+Time:        1.2 s
 ```
 
 ### Live Server Integration Tests
@@ -304,6 +399,34 @@ curl -X POST http://localhost:3000/api/users/login \
   -d '{"email": "admin@example.com", "password": "password123"}'
 ```
 
+#### POST /api/users/reset-password
+Reset password using token from welcome email
+```bash
+curl -X POST http://localhost:3000/api/users/reset-password \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token": "jwt-token-from-email-link",
+    "password": "newpassword123"
+  }'
+```
+
+**Request Body:**
+- `token` (required): JWT token from the password reset link in welcome email
+- `password` (required): New password to set
+
+**Response (success):**
+```json
+{
+  "message": "Password reset successfully"
+}
+```
+
+**Error responses:**
+- `400` - Token and password are required
+- `400` - Invalid reset token
+- `400` - Reset token has expired. Please request a new one.
+- `404` - User not found
+
 #### GET /api/users/profile
 Get current user's profile
 ```bash
@@ -321,9 +444,36 @@ curl -X PUT http://localhost:3000/api/users/profile \
     "first_name": "John",
     "last_name": "Doe",
     "email": "john@example.com",
+    "phone": "555-1234",
     "current_password": "oldpass",
     "new_password": "newpass"
   }'
+```
+
+**Query Parameters:**
+- `first_name` (required): User's first name
+- `last_name` (required): User's last name
+- `email` (required): User's email address
+- `phone` (optional): User's phone number
+- `current_password` (conditional): Required when changing password
+- `new_password` (optional): New password (requires current_password)
+
+**Response:**
+```json
+{
+  "message": "Profile updated successfully",
+  "user": {
+    "id": 1,
+    "member_number": "M-001",
+    "first_name": "John",
+    "last_name": "Doe",
+    "email": "john@example.com",
+    "phone": "555-1234",
+    "role": "member",
+    "is_active": true,
+    "created_at": "2024-03-01T10:00:00Z"
+  }
+}
 ```
 
 ### Members
@@ -868,17 +1018,19 @@ The system prevents creating duplicate billing records for the same flight log.
 
 ## Future Enhancements
 
-- Email notifications for reservations, cancellations, and billing
+- Payment processing integration (Stripe, PayPal)
+- SMS notifications for reservation reminders
 - Maintenance tracking for aircraft with preventive maintenance scheduling
 - Flight instructor scheduling and student progress tracking
 - Weather integration for flight planning
 - Mobile app integration (iOS/Android)
 - Reporting and analytics dashboard
-- Payment processing integration (Stripe, PayPal)
-- SMS notifications for reservation reminders
 - Aircraft courier log tracking
 - Insurance document management
 - Fuel tracking and cost analysis
+- Forgot password flow (request reset via email for existing users)
+- Notification preferences per user
+- Bulk member import and management
 
 ## Contributing
 

@@ -1,6 +1,7 @@
 const http = require('http');
 
 jest.mock('jsonwebtoken', () => ({
+  sign: jest.fn(() => 'signed-reset-token'),
   verify: jest.fn(() => ({ id: 1 }))
 }));
 
@@ -53,8 +54,13 @@ jest.mock('pg', () => {
       return Promise.resolve({ rows: [] });
     }
   };
-  return { Pool: jest.fn(() => mPool) };
+  return { Pool: jest.fn(() => mPool), types: { setTypeParser: jest.fn() } };
 });
+
+const mockSendMail = jest.fn(() => Promise.resolve());
+jest.mock('nodemailer', () => ({
+  createTransport: jest.fn(() => ({ sendMail: mockSendMail }))
+}));
 
 const app = require('../src/index');
 
@@ -83,11 +89,25 @@ describe('Members endpoint', () => {
   afterAll(() => new Promise((resolve) => server.close(resolve)));
 
   test('POST /api/members creates a member', async () => {
-    const payload = { member_number: 'M-100', first_name: 'Alice', last_name: 'Smith', email: 'alice@example.com', phone: '555-1234' };
+    const payload = { member_number: 'M-100', first_name: 'Alice', last_name: 'Smith', email: 'alice@example.com', phone: '555-1234', password: 'pass' };
     const res = await httpRequest(port, '/api/members', 'POST', payload, { Authorization: 'Bearer faketoken' });
     expect(res.statusCode).toBe(201);
     expect(res.body).toHaveProperty('member_number', 'M-100');
     expect(res.body).toHaveProperty('email', 'alice@example.com');
+  });
+
+  test('POST /api/members sends a welcome email to the new member', async () => {
+    mockSendMail.mockClear();
+    const payload = { member_number: 'M-101', first_name: 'Bob', last_name: 'Pilot', email: 'bob@example.com', password: 'pass' };
+    const res = await httpRequest(port, '/api/members', 'POST', payload, { Authorization: 'Bearer faketoken' });
+    expect(res.statusCode).toBe(201);
+    // Allow the fire-and-forget email to complete
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(mockSendMail).toHaveBeenCalledTimes(1);
+    const mailOptions = mockSendMail.mock.calls[0][0];
+    expect(mailOptions.to).toBe('bob@example.com');
+    expect(mailOptions.subject).toMatch(/welcome/i);
+    expect(mailOptions.html).toMatch(/reset-password/i);
   });
 
   test('GET /api/members returns list when authorized', async () => {
