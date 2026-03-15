@@ -1,41 +1,7 @@
-const nodemailer = require('nodemailer');
+const sgMail = require('@sendgrid/mail');
 const jwt = require('jsonwebtoken');
-const dns = require('dns');
-const { promisify } = require('util');
 
-const resolve4 = promisify(dns.resolve4);
-
-const createTransporter = async () => {
-    const smtpHost = process.env.SMTP_HOST;
-    const smtpPort = parseInt(process.env.SMTP_PORT, 10) || 587;
-
-    // Resolve IPv4 address for the SMTP host
-    let host = smtpHost;
-    try {
-        const addresses = await resolve4(smtpHost);
-        if (addresses && addresses.length > 0) {
-            host = addresses[0];
-            console.log(`Resolved ${smtpHost} to IPv4: ${host}`);
-        }
-    } catch (err) {
-        console.error(`Failed to resolve IPv4 for ${smtpHost}:`, err.message);
-        // Fall back to hostname
-    }
-
-    return nodemailer.createTransport({
-        host: host,
-        port: smtpPort,
-        secure: process.env.SMTP_SECURE === 'true' || smtpPort === 465,
-        auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
-        },
-        tls: {
-            // Use original hostname for certificate verification
-            servername: smtpHost,
-        },
-    });
-};
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const sendWelcomeEmail = async (user) => {
     const appUrl = process.env.APP_URL || 'https://localhost:5173';
@@ -47,11 +13,9 @@ const sendWelcomeEmail = async (user) => {
     );
     const resetLink = `${appUrl}/reset-password?token=${resetToken}`;
 
-    const transporter = await createTransporter();
-
-    await transporter.sendMail({
-        from: process.env.SMTP_FROM || 'noreply@wingtime.app',
+    const msg = {
         to: user.email,
+        from: process.env.SENDGRID_FROM || 'noreply@wingtime.app',
         subject: 'Welcome to WingTime!',
         html: `
             <h1>Welcome to WingTime, ${user.first_name}!</h1>
@@ -61,7 +25,9 @@ const sendWelcomeEmail = async (user) => {
             <p>This link will expire in 24 hours.</p>
             <p>If you did not create this account, please ignore this email.</p>
         `,
-    });
+    };
+
+    await sgMail.send(msg);
 };
 
 module.exports = { sendWelcomeEmail };
