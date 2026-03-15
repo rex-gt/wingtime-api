@@ -1,42 +1,38 @@
 const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
 const dns = require('dns');
-const net = require('net');
+const { promisify } = require('util');
 
-// Custom lookup function that forces IPv4
-const lookup4 = (hostname, options, callback) => {
-    if (typeof options === 'function') {
-        callback = options;
-        options = {};
-    }
-    dns.resolve4(hostname, (err, addresses) => {
-        if (err) {
-            callback(err, null, null);
-        } else if (addresses && addresses.length > 0) {
-            callback(null, addresses[0], 4);
-        } else {
-            callback(new Error(`No IPv4 address found for ${hostname}`), null, null);
-        }
-    });
-};
+const resolve4 = promisify(dns.resolve4);
 
-const createTransporter = () => {
+const createTransporter = async () => {
+    const smtpHost = process.env.SMTP_HOST;
     const smtpPort = parseInt(process.env.SMTP_PORT, 10) || 587;
+
+    // Resolve IPv4 address for the SMTP host
+    let host = smtpHost;
+    try {
+        const addresses = await resolve4(smtpHost);
+        if (addresses && addresses.length > 0) {
+            host = addresses[0];
+            console.log(`Resolved ${smtpHost} to IPv4: ${host}`);
+        }
+    } catch (err) {
+        console.error(`Failed to resolve IPv4 for ${smtpHost}:`, err.message);
+        // Fall back to hostname
+    }
+
     return nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
+        host: host,
         port: smtpPort,
         secure: process.env.SMTP_SECURE === 'true' || smtpPort === 465,
         auth: {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASS,
         },
-        // Force IPv4 connection
         tls: {
-            lookup: lookup4,
-        },
-        // Pass lookup to socket as well
-        socket: {
-            lookup: lookup4,
+            // Use original hostname for certificate verification
+            servername: smtpHost,
         },
     });
 };
@@ -51,7 +47,7 @@ const sendWelcomeEmail = async (user) => {
     );
     const resetLink = `${appUrl}/reset-password?token=${resetToken}`;
 
-    const transporter = createTransporter();
+    const transporter = await createTransporter();
 
     await transporter.sendMail({
         from: process.env.SMTP_FROM || 'noreply@wingtime.app',
