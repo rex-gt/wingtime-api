@@ -41,7 +41,6 @@ Scripts to manage Railway environment variables and deployments from your local 
 |--------|-------------|
 | `reset-email.sh` | Remove Resend email configuration only |
 | `reset-all.sh` | Remove ALL custom variables (start fresh) |
-| `cleanup-legacy-vars.sh` | Remove legacy/unused variables (SMTP, DB_) |
 
 ## Quick Start
 
@@ -199,16 +198,15 @@ If you have old SMTP or DB_ variables from a previous configuration:
 
 ```
 scripts/railway/
-├── README.md                # This file
-├── setup-full.sh           # Complete environment setup
-├── setup-app.sh            # Frontend/CORS configuration
-├── setup-email.sh          # Resend email configuration
-├── setup-secrets.sh        # JWT/security secrets
-├── view-vars.sh            # View all variables
-├── test-email.sh           # Test email sending
-├── reset-email.sh          # Remove email config only
-├── reset-all.sh            # Remove ALL custom config
-└── cleanup-legacy-vars.sh  # Remove legacy variables
+├── README.md           # This file
+├── setup-full.sh       # Complete environment setup
+├── setup-app.sh        # Frontend/CORS configuration
+├── setup-email.sh      # Resend email configuration
+├── setup-secrets.sh    # JWT/security secrets
+├── view-vars.sh        # View all variables
+├── test-email.sh       # Test email sending
+├── reset-email.sh      # Remove email config only
+└── reset-all.sh        # Remove ALL custom config
 ```
 
 ## Security Best Practices
