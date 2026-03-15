@@ -60,7 +60,10 @@ const registerUser = async (req, res) => {
         const user = result.rows[0];
         const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
-        sendWelcomeEmail(user).catch((err) => console.error('Failed to send welcome email:', err));
+        console.log('Attempting to send welcome email to:', user.email);
+        sendWelcomeEmail(user)
+            .then(() => console.log('Welcome email sent successfully to:', user.email))
+            .catch((err) => console.error('Failed to send welcome email:', err.message));
 
         res.status(201).json({
             id: user.id,

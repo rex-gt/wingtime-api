@@ -53,7 +53,10 @@ const createMember = async (req, res) => {
 
         const newMember = result.rows[0];
 
-        sendWelcomeEmail(newMember).catch((err) => console.error('Failed to send welcome email:', err));
+        console.log('Attempting to send welcome email to:', newMember.email);
+        sendWelcomeEmail(newMember)
+            .then(() => console.log('Welcome email sent successfully to:', newMember.email))
+            .catch((err) => console.error('Failed to send welcome email:', err.message));
 
         res.status(201).json({
             id: newMember.id,
