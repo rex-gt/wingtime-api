@@ -130,8 +130,8 @@ jest.mock('pg', () => {
   return { Pool: jest.fn(() => mPool), types: { setTypeParser: jest.fn() } };
 });
 
-jest.mock('nodemailer', () => ({
-  createTransport: jest.fn(() => ({ sendMail: jest.fn(() => Promise.resolve()) }))
+jest.mock('resend', () => ({
+  Resend: jest.fn(() => ({ emails: { send: jest.fn(() => Promise.resolve({ id: 'test-id' })) } }))
 }));
 
 const app = require('../src/index');

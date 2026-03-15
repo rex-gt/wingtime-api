@@ -57,9 +57,9 @@ jest.mock('pg', () => {
   return { Pool: jest.fn(() => mPool), types: { setTypeParser: jest.fn() } };
 });
 
-const mockSendMail = jest.fn(() => Promise.resolve());
-jest.mock('nodemailer', () => ({
-  createTransport: jest.fn(() => ({ sendMail: mockSendMail }))
+const mockSend = jest.fn(() => Promise.resolve({ id: 'test-email-id' }));
+jest.mock('resend', () => ({
+  Resend: jest.fn(() => ({ emails: { send: mockSend } }))
 }));
 
 const app = require('../src/index');
@@ -97,14 +97,14 @@ describe('Members endpoint', () => {
   });
 
   test('POST /api/members sends a welcome email to the new member', async () => {
-    mockSendMail.mockClear();
+    mockSend.mockClear();
     const payload = { member_number: 'M-101', first_name: 'Bob', last_name: 'Pilot', email: 'bob@example.com', password: 'pass' };
     const res = await httpRequest(port, '/api/members', 'POST', payload, { Authorization: 'Bearer faketoken' });
     expect(res.statusCode).toBe(201);
     // Allow the fire-and-forget email to complete
     await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(mockSendMail).toHaveBeenCalledTimes(1);
-    const mailOptions = mockSendMail.mock.calls[0][0];
+    expect(mockSend).toHaveBeenCalledTimes(1);
+    const mailOptions = mockSend.mock.calls[0][0];
     expect(mailOptions.to).toBe('bob@example.com');
     expect(mailOptions.subject).toMatch(/welcome/i);
     expect(mailOptions.html).toMatch(/reset-password/i);

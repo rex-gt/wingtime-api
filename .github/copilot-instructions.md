@@ -1,8 +1,8 @@
-# Copilot Instructions for WingTime API
+# Copilot Instructions for AeroBook API
 
 ## Project Overview
 
-WingTime API is a Node.js/Express REST API backend for a flying club management system. It handles member management, aircraft scheduling, flight logging, and automated billing. The database is PostgreSQL, accessed via the `pg` connection pool. Authentication uses JWT (via `jsonwebtoken`) and passwords are hashed with `bcryptjs`.
+AeroBook API is a Node.js/Express REST API backend for a flying club management system. It handles member management, aircraft scheduling, flight logging, and automated billing. The database is PostgreSQL, accessed via the `pg` connection pool. Authentication uses JWT (via `jsonwebtoken`) and passwords are hashed with `bcryptjs`.
 
 ## Tech Stack
 

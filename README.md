@@ -1,11 +1,11 @@
-# WingTime Flight Management System API
+# AeroBook Flight Management System API
 
-A comprehensive backend service for WingTime Flight Management System, supporting aircraft scheduling, flight logs, and member billing for a flying club.
+A comprehensive backend service for AeroBook Flight Management System, supporting aircraft scheduling, flight logs, and member billing for a flying club.
 
 ## Project Structure
 
 ```
-wingtime-api/
+aerobook-api/
 ├── src/                          # Application source code
 │   ├── app.js                   # Express app setup, CORS config, and route mounting
 │   ├── index.js                 # App module re-export (used by root index.js)
@@ -80,7 +80,7 @@ The project follows a clean, modular architecture with proper separation of conc
 - **Middleware** handles JWT authentication (`protect`) and role-based authorization (`authorize`)
 
 ### CORS Configuration
-`app.js` supports configurable allowed origins via the `ALLOWED_ORIGINS` environment variable. It supports exact matches and wildcard patterns (e.g., `*.vercel.app`). Defaults to `http://localhost:5173`, `http://localhost:4200`, and `https://wingtime.vercel.app`.
+`app.js` supports configurable allowed origins via the `ALLOWED_ORIGINS` environment variable. It supports exact matches and wildcard patterns (e.g., `*.vercel.app`). Defaults to `http://localhost:5173`, `http://localhost:4200`, and `https://aerobook.app`.
 
 ### File Organization
 - `index.js` - HTTP/HTTPS server entry point; reads SSL certs if configured
@@ -168,17 +168,17 @@ SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
 SMTP_PASS=your-app-password
-SMTP_FROM=noreply@wingtime.app
+SMTP_FROM=noreply@aerobook.app
 SMTP_SECURE=false
 
 # Optional: Separate secret for password reset tokens
 # RESET_TOKEN_SECRET=your_reset_token_secret_here
 
 # Optional: App URL for email links (for frontend app redirects)
-# APP_URL=https://wingtime.vercel.app
+# APP_URL=https://aerobook.app
 
 # CORS – comma-separated list; supports wildcard patterns like *.vercel.app
-# ALLOWED_ORIGINS=http://localhost:5173,https://wingtime.vercel.app
+# ALLOWED_ORIGINS=http://localhost:5173,https://aerobook.app
 
 # Optional SSL (omit to run plain HTTP)
 # SSL_KEY_PATH=/path/to/privkey.pem
@@ -243,7 +243,7 @@ SMTP_USER=your-email@gmail.com
 SMTP_PASS=your-app-password
 
 # Sender configuration
-SMTP_FROM=noreply@wingtime.app
+SMTP_FROM=noreply@aerobook.app
 SMTP_SECURE=false  # Set to 'true' for port 465 (implicit TLS)
 
 # Optional: Use a different secret for password reset tokens
@@ -251,7 +251,7 @@ SMTP_SECURE=false  # Set to 'true' for port 465 (implicit TLS)
 RESET_TOKEN_SECRET=your_reset_token_secret_here
 
 # Optional: App URL for email links (for frontend app redirects)
-APP_URL=https://wingtime.app
+APP_URL=https://aerobook.app
 ```
 
 ### Gmail Configuration (Recommended)

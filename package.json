@@ -1,7 +1,7 @@
 {
-  "name": "wingtime-api",
+  "name": "aerobook-api",
   "version": "1.0.0",
-  "description": "Backend API for WingTime Flight Management System",
+  "description": "Backend API for AeroBook Flight Management System",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

@@ -1,40 +1,37 @@
-jest.mock('nodemailer');
+jest.mock('resend');
 jest.mock('jsonwebtoken');
 
-const nodemailer = require('nodemailer');
-const jwt = require('jsonwebtoken');
-const { sendWelcomeEmail } = require('../src/services/emailService');
-
 describe('Email Service', () => {
-  let mockSendMail;
-  let mockCreateTransport;
+  let mockSend;
+  let sendWelcomeEmail;
+  let jwt;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.resetModules();
 
-    // Mock sendMail
-    mockSendMail = jest.fn();
-    mockSendMail.mockResolvedValue({ messageId: '<test@example.com>' });
-
-    // Mock createTransport
-    mockCreateTransport = jest.fn(() => ({
-      sendMail: mockSendMail
-    }));
-
-    nodemailer.createTransport = mockCreateTransport;
-
-    // Mock jwt.sign
-    jwt.sign = jest.fn(() => 'mock-reset-token-12345');
-
-    // Mock environment variables
-    process.env.SMTP_HOST = 'smtp.gmail.com';
-    process.env.SMTP_PORT = '587';
-    process.env.SMTP_USER = 'test@gmail.com';
-    process.env.SMTP_PASS = 'password123';
-    process.env.SMTP_FROM = 'noreply@aerobook.app';
-    process.env.SMTP_SECURE = 'false';
+    // Set up environment variables before requiring the module
+    process.env.RESEND_API_KEY = 're_test_key';
+    process.env.RESEND_FROM = 'AeroBook <noreply@aerobook.app>';
     process.env.APP_URL = 'http://localhost:3000';
     process.env.JWT_SECRET = 'test-secret';
+    delete process.env.RESET_TOKEN_SECRET;
+
+    // Mock Resend
+    mockSend = jest.fn().mockResolvedValue({ id: 'test-email-id' });
+    const { Resend } = require('resend');
+    Resend.mockImplementation(() => ({
+      emails: {
+        send: mockSend
+      }
+    }));
+
+    // Mock jwt
+    jwt = require('jsonwebtoken');
+    jwt.sign = jest.fn(() => 'mock-reset-token-12345');
+
+    // Now require the email service (after mocks are set up)
+    const emailService = require('../src/services/emailService');
+    sendWelcomeEmail = emailService.sendWelcomeEmail;
   });
 
   test('sendWelcomeEmail should send email with correct structure', async () => {
@@ -47,13 +44,12 @@ describe('Email Service', () => {
 
     await sendWelcomeEmail(user);
 
-    expect(mockCreateTransport).toHaveBeenCalled();
-    expect(mockSendMail).toHaveBeenCalledTimes(1);
+    expect(mockSend).toHaveBeenCalledTimes(1);
 
-    const emailCall = mockSendMail.mock.calls[0][0];
+    const emailCall = mockSend.mock.calls[0][0];
     expect(emailCall.to).toBe('john@example.com');
-    expect(emailCall.from).toBe('noreply@aerobook.app');
-    expect(emailCall.subject).toBe('Welcome to WingTime!');
+    expect(emailCall.from).toBe('AeroBook <noreply@aerobook.app>');
+    expect(emailCall.subject).toBe('Welcome to AeroBook!');
   });
 
   test('sendWelcomeEmail should include personalized greeting', async () => {
@@ -66,8 +62,8 @@ describe('Email Service', () => {
 
     await sendWelcomeEmail(user);
 
-    const emailCall = mockSendMail.mock.calls[0][0];
-    expect(emailCall.html).toContain('Welcome to WingTime, Alice!');
+    const emailCall = mockSend.mock.calls[0][0];
+    expect(emailCall.html).toContain('Welcome to AeroBook, Alice!');
   });
 
   test('sendWelcomeEmail should include password reset link', async () => {
@@ -80,8 +76,8 @@ describe('Email Service', () => {
 
     await sendWelcomeEmail(user);
 
-    const emailCall = mockSendMail.mock.calls[0][0];
-    expect(emailCall.html).toContain('Set up your WingTime password');
+    const emailCall = mockSend.mock.calls[0][0];
+    expect(emailCall.html).toContain('Set up your AeroBook password');
     expect(emailCall.html).toContain('mock-reset-token-12345');
   });
 
@@ -103,7 +99,20 @@ describe('Email Service', () => {
   });
 
   test('sendWelcomeEmail should use RESET_TOKEN_SECRET if provided', async () => {
+    // Reset and reconfigure with RESET_TOKEN_SECRET
+    jest.resetModules();
     process.env.RESET_TOKEN_SECRET = 'reset-secret-key';
+
+    const mockSend2 = jest.fn().mockResolvedValue({ id: 'test-id' });
+    const { Resend } = require('resend');
+    Resend.mockImplementation(() => ({
+      emails: { send: mockSend2 }
+    }));
+
+    const jwt2 = require('jsonwebtoken');
+    jwt2.sign = jest.fn(() => 'mock-token');
+
+    const { sendWelcomeEmail: sendWelcomeEmail2 } = require('../src/services/emailService');
 
     const user = {
       id: 10,
@@ -112,18 +121,30 @@ describe('Email Service', () => {
       email: 'david@example.com'
     };
 
-    await sendWelcomeEmail(user);
+    await sendWelcomeEmail2(user);
 
-    expect(jwt.sign).toHaveBeenCalledWith(
+    expect(jwt2.sign).toHaveBeenCalledWith(
       expect.any(Object),
       'reset-secret-key',
       { expiresIn: '24h' }
     );
-
-    delete process.env.RESET_TOKEN_SECRET;
   });
 
-  test('sendWelcomeEmail should configure transporter with correct SMTP settings', async () => {
+  test('sendWelcomeEmail should use default RESEND_FROM when not configured', async () => {
+    jest.resetModules();
+    delete process.env.RESEND_FROM;
+
+    const mockSend2 = jest.fn().mockResolvedValue({ id: 'test-id' });
+    const { Resend } = require('resend');
+    Resend.mockImplementation(() => ({
+      emails: { send: mockSend2 }
+    }));
+
+    const jwt2 = require('jsonwebtoken');
+    jwt2.sign = jest.fn(() => 'token-abc');
+
+    const { sendWelcomeEmail: sendWelcomeEmail2 } = require('../src/services/emailService');
+
     const user = {
       id: 15,
       first_name: 'Eve',
@@ -131,69 +152,26 @@ describe('Email Service', () => {
       email: 'eve@example.com'
     };
 
-    await sendWelcomeEmail(user);
-
-    expect(mockCreateTransport).toHaveBeenCalledWith({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false,
-      auth: {
-        user: 'test@gmail.com',
-        pass: 'password123'
-      }
-    });
-  });
-
-  test('sendWelcomeEmail should handle secure SMTP on port 465', async () => {
-    process.env.SMTP_PORT = '465';
-    process.env.SMTP_SECURE = 'true';
-
-    const user = {
-      id: 20,
-      first_name: 'Frank',
-      last_name: 'Miller',
-      email: 'frank@example.com'
-    };
-
-    // Recreate the module to pick up env changes
-    jest.resetModules();
-    jest.mock('nodemailer');
-    jest.mock('jsonwebtoken');
-
-    const nodemailer2 = require('nodemailer');
-    const jwt2 = require('jsonwebtoken');
-    const mockSendMail2 = jest.fn().mockResolvedValue({ messageId: '<test@example.com>' });
-    nodemailer2.createTransport = jest.fn(() => ({ sendMail: mockSendMail2 }));
-    jwt2.sign = jest.fn(() => 'mock-token');
-
-    const { sendWelcomeEmail: sendWelcomeEmail2 } = require('../src/services/emailService');
     await sendWelcomeEmail2(user);
 
-    expect(nodemailer2.createTransport).toHaveBeenCalledWith(
-      expect.objectContaining({
-        port: 465,
-        secure: true
-      })
-    );
-
-    process.env.SMTP_PORT = '587';
-    process.env.SMTP_SECURE = 'false';
+    const emailCall = mockSend2.mock.calls[0][0];
+    expect(emailCall.from).toBe('AeroBook <noreply@aerobook.app>');
   });
 
   test('sendWelcomeEmail should use default APP_URL when not configured', async () => {
+    jest.resetModules();
     delete process.env.APP_URL;
 
-    jest.resetModules();
-    jest.mock('nodemailer');
-    jest.mock('jsonwebtoken');
+    const mockSend2 = jest.fn().mockResolvedValue({ id: 'test-id' });
+    const { Resend } = require('resend');
+    Resend.mockImplementation(() => ({
+      emails: { send: mockSend2 }
+    }));
 
-    const nodemailer3 = require('nodemailer');
-    const jwt3 = require('jsonwebtoken');
-    const mockSendMail3 = jest.fn().mockResolvedValue({ messageId: '<test@example.com>' });
-    nodemailer3.createTransport = jest.fn(() => ({ sendMail: mockSendMail3 }));
-    jwt3.sign = jest.fn(() => 'token-abc');
+    const jwt2 = require('jsonwebtoken');
+    jwt2.sign = jest.fn(() => 'token-abc');
 
-    const { sendWelcomeEmail: sendWelcomeEmail3 } = require('../src/services/emailService');
+    const { sendWelcomeEmail: sendWelcomeEmail2 } = require('../src/services/emailService');
 
     const user = {
       id: 25,
@@ -202,12 +180,10 @@ describe('Email Service', () => {
       email: 'grace@example.com'
     };
 
-    await sendWelcomeEmail3(user);
+    await sendWelcomeEmail2(user);
 
-    const emailCall = mockSendMail3.mock.calls[0][0];
-    expect(emailCall.html).toContain('http://localhost:3000');
-
-    process.env.APP_URL = 'http://localhost:3000';
+    const emailCall = mockSend2.mock.calls[0][0];
+    expect(emailCall.html).toContain('https://localhost:5173');
   });
 
   test('sendWelcomeEmail should include 24-hour expiration notice', async () => {
@@ -220,7 +196,7 @@ describe('Email Service', () => {
 
     await sendWelcomeEmail(user);
 
-    const emailCall = mockSendMail.mock.calls[0][0];
+    const emailCall = mockSend.mock.calls[0][0];
     expect(emailCall.html).toContain('This link will expire in 24 hours');
   });
 
@@ -234,24 +210,24 @@ describe('Email Service', () => {
 
     await sendWelcomeEmail(user);
 
-    const emailCall = mockSendMail.mock.calls[0][0];
+    const emailCall = mockSend.mock.calls[0][0];
     expect(emailCall.html).toContain('If you did not create this account, please ignore this email');
   });
 
-  test('sendWelcomeEmail should use custom SMTP_FROM', async () => {
-    process.env.SMTP_FROM = 'hello@mycompany.com';
-
+  test('sendWelcomeEmail should use custom RESEND_FROM', async () => {
     jest.resetModules();
-    jest.mock('nodemailer');
-    jest.mock('jsonwebtoken');
+    process.env.RESEND_FROM = 'hello@mycompany.com';
 
-    const nodemailer4 = require('nodemailer');
-    const jwt4 = require('jsonwebtoken');
-    const mockSendMail4 = jest.fn().mockResolvedValue({ messageId: '<test@example.com>' });
-    nodemailer4.createTransport = jest.fn(() => ({ sendMail: mockSendMail4 }));
-    jwt4.sign = jest.fn(() => 'token-xyz');
+    const mockSend2 = jest.fn().mockResolvedValue({ id: 'test-id' });
+    const { Resend } = require('resend');
+    Resend.mockImplementation(() => ({
+      emails: { send: mockSend2 }
+    }));
 
-    const { sendWelcomeEmail: sendWelcomeEmail4 } = require('../src/services/emailService');
+    const jwt2 = require('jsonwebtoken');
+    jwt2.sign = jest.fn(() => 'token-xyz');
+
+    const { sendWelcomeEmail: sendWelcomeEmail2 } = require('../src/services/emailService');
 
     const user = {
       id: 40,
@@ -260,16 +236,14 @@ describe('Email Service', () => {
       email: 'jack@example.com'
     };
 
-    await sendWelcomeEmail4(user);
+    await sendWelcomeEmail2(user);
 
-    const emailCall = mockSendMail4.mock.calls[0][0];
+    const emailCall = mockSend2.mock.calls[0][0];
     expect(emailCall.from).toBe('hello@mycompany.com');
-
-    process.env.SMTP_FROM = 'noreply@aerobook.app';
   });
 
   test('sendWelcomeEmail should handle email sending errors gracefully', async () => {
-    mockSendMail.mockRejectedValueOnce(new Error('SMTP connection failed'));
+    mockSend.mockRejectedValueOnce(new Error('Resend API error'));
 
     const user = {
       id: 45,
@@ -278,6 +252,6 @@ describe('Email Service', () => {
       email: 'karen@example.com'
     };
 
-    await expect(sendWelcomeEmail(user)).rejects.toThrow('SMTP connection failed');
+    await expect(sendWelcomeEmail(user)).rejects.toThrow('Resend API error');
   });
 });
