@@ -1,6 +1,5 @@
 const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
-const dns = require('dns');
 
 const createTransporter = () => {
     const smtpPort = parseInt(process.env.SMTP_PORT, 10) || 587;
@@ -11,16 +10,6 @@ const createTransporter = () => {
         auth: {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASS,
-        },
-        // Force IPv4 DNS resolution - Railway doesn't support IPv6 outbound
-        dnsLookup: (hostname, options, callback) => {
-            dns.resolve4(hostname, (err, addresses) => {
-                if (err) {
-                    callback(err);
-                } else {
-                    callback(null, addresses[0], 4);
-                }
-            });
         },
     });
 };
