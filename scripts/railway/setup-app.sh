@@ -45,8 +45,14 @@ if [ -n "$current_origins" ]; then
 fi
 echo ""
 
-default_app_url="${APP_URL:-https://aerobook.app}"
+default_app_url="$APP_URL"
 default_origins="${ALLOWED_ORIGINS:-$default_app_url}"
+
+if [ -z "$default_app_url" ]; then
+    echo "⚠️  APP_URL not found in .env file"
+    echo "Please set APP_URL in your .env file first"
+    exit 1
+fi
 
 read -p "Enter your frontend URL [default: $default_app_url]: " app_url
 app_url=${app_url:-$default_app_url}

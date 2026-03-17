@@ -63,8 +63,14 @@ echo "1. Frontend / App Configuration"
 echo "=========================================="
 echo ""
 
-default_app_url="${APP_URL:-https://aerobook.app}"
+default_app_url="$APP_URL"
 default_origins="${ALLOWED_ORIGINS:-$default_app_url}"
+
+if [ -z "$default_app_url" ]; then
+    echo "⚠️  APP_URL not found in .env file"
+    echo "Please set APP_URL in your .env file first"
+    exit 1
+fi
 
 read -p "Enter your frontend URL [default: $default_app_url]: " app_url
 app_url=${app_url:-$default_app_url}
@@ -98,7 +104,13 @@ echo "3. Email Configuration (Resend)"
 echo "=========================================="
 echo ""
 
-default_resend_from="${RESEND_FROM:-AeroBook <noreply@aerobook.app>}"
+default_resend_from="$RESEND_FROM"
+
+if [ -z "$default_resend_from" ]; then
+    echo "⚠️  RESEND_FROM not found in .env file"
+    echo "Please set RESEND_FROM in your .env file first"
+    exit 1
+fi
 
 if [ -n "$RESEND_API_KEY" ]; then
     echo "Found RESEND_API_KEY in .env"

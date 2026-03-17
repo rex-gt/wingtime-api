@@ -66,7 +66,13 @@ echo "2. A verified 'From' address or domain"
 echo ""
 
 # Get Resend configuration
-default_resend_from="${RESEND_FROM:-AeroBook <noreply@aerobook.app>}"
+default_resend_from="$RESEND_FROM"
+
+if [ -z "$default_resend_from" ]; then
+    echo "⚠️  RESEND_FROM not found in .env file"
+    echo "Please set RESEND_FROM in your .env file first"
+    exit 1
+fi
 
 if [ -n "$RESEND_API_KEY" ]; then
     echo "Found RESEND_API_KEY in .env"

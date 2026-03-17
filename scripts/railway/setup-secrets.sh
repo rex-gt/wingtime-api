@@ -2,6 +2,15 @@
 
 # Railway Secrets Setup Script
 # Sets up JWT and security secrets
+# Reads defaults from .env file
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# Source .env file if it exists
+if [ -f "$PROJECT_ROOT/.env" ]; then
+    export $(grep -v '^#' "$PROJECT_ROOT/.env" | grep -v '^\s*$' | xargs)
+fi
 
 echo "=========================================="
 echo "AeroBook - Security Secrets Setup"
