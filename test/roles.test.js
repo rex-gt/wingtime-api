@@ -5,6 +5,7 @@ let mockUserRole = 'member';
 let mockUserId = 1;
 
 jest.mock('jsonwebtoken', () => ({
+  sign: jest.fn(() => 'signed-token'),
   verify: jest.fn(() => ({ id: mockUserId }))
 }));
 
@@ -16,6 +17,20 @@ jest.mock('pg', () => {
       // Auth middleware user lookup
       if (lt.includes('select id, member_number') && lt.includes('where id = $1')) {
         return Promise.resolve({ rows: [{ id: mockUserId, member_number: 'M-1', first_name: 'Test', last_name: 'User', email: 'test@example.com', role: mockUserRole, is_active: true }] });
+      }
+
+      // Aircraft availability check (for createReservation and updateReservation)
+      if (lt.includes('select is_available from aircraft where id')) {
+        return Promise.resolve({ rows: [{ is_available: true }] });
+      }
+
+      // Current reservation lookup for update (aircraft_id, start_time, end_time)
+      if (lt.includes('select aircraft_id, start_time, end_time from reservations where id')) {
+        const id = params && params[0];
+        if (id === '1') {
+          return Promise.resolve({ rows: [{ aircraft_id: 2, start_time: '2026-02-01T10:00:00Z', end_time: '2026-02-01T11:00:00Z' }] });
+        }
+        return Promise.resolve({ rows: [] });
       }
 
       // Ownership check for reservation update/delete
@@ -87,9 +102,9 @@ jest.mock('pg', () => {
 
       // Update reservation
       if (lt.includes('update reservations')) {
-        const id = params && params[4];
+        const id = params && params[5];
         if (id === '1') {
-          return Promise.resolve({ rows: [{ id, member_id: 1, start_time: params[0], end_time: params[1], status: params[2], notes: params[3] }] });
+          return Promise.resolve({ rows: [{ id, member_id: 1, aircraft_id: params[4] || 2, start_time: params[0], end_time: params[1], status: params[2], notes: params[3] }] });
         }
         return Promise.resolve({ rows: [] });
       }
@@ -112,8 +127,12 @@ jest.mock('pg', () => {
       return Promise.resolve({ rows: [] });
     }
   };
-  return { Pool: jest.fn(() => mPool) };
+  return { Pool: jest.fn(() => mPool), types: { setTypeParser: jest.fn() } };
 });
+
+jest.mock('resend', () => ({
+  Resend: jest.fn(() => ({ emails: { send: jest.fn(() => Promise.resolve({ id: 'test-id' })) } }))
+}));
 
 const app = require('../src/index');
 
@@ -335,5 +354,38 @@ describe('Role-based access control', () => {
     const payload = { member_id: 1, aircraft_id: 1, start_time: '2026-07-01T09:00:00Z', end_time: '2026-07-01T10:00:00Z' };
     const res = await httpRequest(port, '/api/reservations', 'POST', payload);
     expect(res.statusCode).toBe(401);
+  });
+
+  test('Member can create a reservation for themselves', async () => {
+    mockUserRole = 'member';
+    mockUserId = 1;
+    const payload = { member_id: 1, aircraft_id: 2, start_time: '2026-08-01T09:00:00Z', end_time: '2026-08-01T10:00:00Z' };
+    const res = await httpRequest(port, '/api/reservations', 'POST', payload, { Authorization: 'Bearer faketoken' });
+    expect(res.statusCode).toBe(201);
+  });
+
+  test('Member cannot create a reservation for another member (403)', async () => {
+    mockUserRole = 'member';
+    mockUserId = 1;
+    const payload = { member_id: 99, aircraft_id: 2, start_time: '2026-08-01T09:00:00Z', end_time: '2026-08-01T10:00:00Z' };
+    const res = await httpRequest(port, '/api/reservations', 'POST', payload, { Authorization: 'Bearer faketoken' });
+    expect(res.statusCode).toBe(403);
+    expect(res.body).toHaveProperty('error');
+  });
+
+  test('Operator can create a reservation for any member', async () => {
+    mockUserRole = 'operator';
+    mockUserId = 2;
+    const payload = { member_id: 99, aircraft_id: 2, start_time: '2026-08-01T09:00:00Z', end_time: '2026-08-01T10:00:00Z' };
+    const res = await httpRequest(port, '/api/reservations', 'POST', payload, { Authorization: 'Bearer faketoken' });
+    expect(res.statusCode).toBe(201);
+  });
+
+  test('Admin can create a reservation for any member', async () => {
+    mockUserRole = 'admin';
+    mockUserId = 1;
+    const payload = { member_id: 99, aircraft_id: 2, start_time: '2026-08-01T09:00:00Z', end_time: '2026-08-01T10:00:00Z' };
+    const res = await httpRequest(port, '/api/reservations', 'POST', payload, { Authorization: 'Bearer faketoken' });
+    expect(res.statusCode).toBe(201);
   });
 });

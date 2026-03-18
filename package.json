@@ -1,8 +1,11 @@
 {
-  "name": "wingtime-api",
+  "name": "aerobook-api",
   "version": "1.0.0",
-  "description": "Backend API for WingTime Flight Management System",
+  "description": "Backend API for AeroBook Flight Management System",
   "main": "index.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
@@ -24,7 +27,8 @@
     "express-rate-limit": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "nodemailer": "^8.0.1",
-    "pg": "^8.11.3"
+    "pg": "^8.11.3",
+    "resend": "^6.9.3"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",

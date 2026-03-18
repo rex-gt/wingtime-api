@@ -21,7 +21,11 @@ const resetPasswordLimiter = rateLimit({
 });
 
 router.post('/register', registerUser);
+const { loginUser, getProfile, updateProfile, resetPassword } = require('../controllers/authController');
+const { protect } = require('../middleware/auth');
+
 router.post('/login', loginUser);
+router.post('/reset-password', resetPassword);
 router.get('/profile', protect, getProfile);
 router.put('/profile', protect, updateProfile);
 router.post('/forgot-password', forgotPasswordLimiter, forgotPassword);

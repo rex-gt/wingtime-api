@@ -35,44 +35,6 @@ const loginUser = async (req, res) => {
     }
 };
 
-const registerUser = async (req, res) => {
-    const { member_number, first_name, last_name, email, phone, password, role } = req.body;
-
-    if (!email || !password || !first_name || !last_name) {
-        return res.status(400).json({ message: 'Missing required fields' });
-    }
-
-    try {
-        const existing = await pool.query('SELECT id FROM members WHERE email = $1', [email]);
-        if (existing.rows.length > 0) {
-            return res.status(409).json({ message: 'Email already registered' });
-        }
-
-        const hashed = await bcrypt.hash(password, 10);
-        const mNumber = member_number || `M-${Date.now()}`;
-
-        const result = await pool.query(
-            `INSERT INTO members (member_number, first_name, last_name, email, phone, password, role)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)
-             RETURNING *`,
-            [mNumber, first_name, last_name, email, phone || null, hashed, role || 'member']
-        );
-
-        const user = result.rows[0];
-        const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '30d' });
-
-        res.status(201).json({
-            id: user.id,
-            name: `${user.first_name} ${user.last_name}`,
-            email: user.email,
-            token,
-        });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server error' });
-    }
-};
-
 const getProfile = async (req, res) => {
     try {
         const userId = req.user && req.user.id;
@@ -144,14 +106,14 @@ const updateProfile = async (req, res) => {
         const userIndex = params.length;
 
         const query = `
-            UPDATE members 
+            UPDATE members
             SET ${updateFields.join(', ')}
             WHERE id = $${userIndex}
             RETURNING id, member_number, first_name, last_name, email, phone, role, is_active, created_at
         `;
 
         const result = await pool.query(query, params);
-        
+
         if (!result.rows[0]) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -169,75 +131,48 @@ const updateProfile = async (req, res) => {
     }
 };
 
-const forgotPassword = async (req, res) => {
-    const { email } = req.body;
-
-    if (!email) {
-        return res.status(400).json({ message: 'Email is required' });
-    }
-
-    try {
-        const result = await pool.query('SELECT id, email, first_name FROM members WHERE email = $1', [email]);
-        const user = result.rows[0];
-
-        if (!user) {
-            return res.status(404).json({ message: 'No account found with that email address' });
-        }
-
-        const resetToken = crypto.randomBytes(32).toString('hex');
-        const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-        const expires = new Date(Date.now() + 10 * 60 * 1000);
-
-        await pool.query(
-            'UPDATE members SET password_reset_token = $1, password_reset_expires = $2 WHERE id = $3',
-            [hashedToken, expires, user.id]
-        );
-
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-        const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
-
-        await sendPasswordResetEmail(user.email, resetUrl);
-
-        res.json({ message: 'Password reset email sent' });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server error' });
-    }
-};
-
 const resetPassword = async (req, res) => {
-    const { token } = req.params;
-    const { password } = req.body;
+    const { token, password } = req.body;
 
-    if (!password) {
-        return res.status(400).json({ message: 'Password is required' });
+    if (!token || !password) {
+        return res.status(400).json({ message: 'Token and password are required' });
     }
 
     try {
-        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+        // Verify the reset token
+        const resetSecret = process.env.RESET_TOKEN_SECRET || process.env.JWT_SECRET;
+        const decoded = jwt.verify(token, resetSecret);
 
-        const result = await pool.query(
-            'SELECT id FROM members WHERE password_reset_token = $1 AND password_reset_expires > $2',
-            [hashedToken, new Date()]
-        );
-        const user = result.rows[0];
-
-        if (!user) {
-            return res.status(400).json({ message: 'Password reset token is invalid or has expired' });
+        // Check if the token has the correct purpose
+        if (decoded.purpose !== 'password-reset') {
+            return res.status(400).json({ message: 'Invalid reset token' });
         }
 
-        const hashed = await bcrypt.hash(password, 10);
+        const userId = decoded.id;
 
-        await pool.query(
-            'UPDATE members SET password = $1, password_reset_token = NULL, password_reset_expires = NULL WHERE id = $2',
-            [hashed, user.id]
-        );
+        // Check if user exists
+        const userResult = await pool.query('SELECT id FROM members WHERE id = $1', [userId]);
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({ message: 'User not found' });
+        }
 
-        res.json({ message: 'Password has been reset successfully' });
+        // Hash the new password
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Update the password
+        await pool.query('UPDATE members SET password = $1 WHERE id = $2', [hashedPassword, userId]);
+
+        res.json({ message: 'Password reset successfully' });
     } catch (err) {
-        console.error(err);
+        if (err.name === 'TokenExpiredError') {
+            return res.status(400).json({ message: 'Reset token has expired. Please request a new one.' });
+        }
+        if (err.name === 'JsonWebTokenError') {
+            return res.status(400).json({ message: 'Invalid reset token' });
+        }
+        console.error('Password reset error:', err);
         res.status(500).json({ message: 'Server error' });
     }
 };
 
-module.exports = { loginUser, registerUser, getProfile, updateProfile, forgotPassword, resetPassword };
+module.exports = { loginUser, getProfile, updateProfile, resetPassword };

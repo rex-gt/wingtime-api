@@ -4,10 +4,12 @@ require('dotenv').config();
 // TIMESTAMP WITHOUT TIME ZONE (OID 1114) — this app always writes UTC values,
 // but pg interprets bare timestamp strings as local time, shifting dates by the
 // server's UTC offset on the way out. Append 'Z' so it is parsed as UTC.
-types.setTypeParser(1114, (val) => {
-  if (!val) return null;
-  return new Date(val.replace(' ', 'T') + 'Z');
-});
+if (types && typeof types.setTypeParser === 'function') {
+  types.setTypeParser(1114, (val) => {
+    if (!val) return null;
+    return new Date(val.replace(' ', 'T') + 'Z');
+  });
+}
 
 // Railway provides DATABASE_URL, which should be used in production
 // For local development, fall back to individual env variables
@@ -26,7 +28,9 @@ const pool = new Pool(
         host: process.env.DB_HOST || 'localhost',
         database: process.env.DB_NAME || 'flying_club',
         password: process.env.DB_PASSWORD || 'password',
-        port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 5432
+        port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 5432,
+        // Force password authentication method to avoid trust auth issues
+        sslmode: 'disable'
       }
 );
 

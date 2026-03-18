@@ -26,7 +26,7 @@ jest.mock('pg', () => {
       return Promise.resolve({ rows: [] });
     }
   };
-  return { Pool: jest.fn(() => mPool) };
+  return { Pool: jest.fn(() => mPool), types: { setTypeParser: jest.fn() } };
 });
 
 const app = require('../src/index');

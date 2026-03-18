@@ -1,4 +1,20 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config(); // Load .env first
+require('dotenv').config({ path: path.resolve(process.cwd(), '.env.local'), override: true }); // Override with .env.local
+
+// Force IPv4 DNS resolution - Railway doesn't support IPv6 outbound
+const dns = require('dns');
+const originalLookup = dns.lookup;
+dns.lookup = (hostname, options, callback) => {
+    if (typeof options === 'function') {
+        callback = options;
+        options = {};
+    }
+    options = options || {};
+    options.family = 4;
+    return originalLookup(hostname, options, callback);
+};
+
 const fs = require('fs');
 const http = require('http');
 const https = require('https');

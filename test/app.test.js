@@ -1,6 +1,7 @@
 const http = require('http');
 
 jest.mock('jsonwebtoken', () => ({
+  sign: jest.fn(() => 'signed-token'),
   verify: jest.fn(() => ({ id: 1 }))
 }));
 
@@ -21,7 +22,7 @@ jest.mock('pg', () => {
       return Promise.resolve({ rows: [] });
     }
   };
-  return { Pool: jest.fn(() => mPool) };
+  return { Pool: jest.fn(() => mPool), types: { setTypeParser: jest.fn() } };
 });
 
 const app = require('../src/index');

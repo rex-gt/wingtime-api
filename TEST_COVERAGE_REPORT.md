@@ -14,7 +14,7 @@ Successfully improved test coverage for the Flying Club API with a focus on erro
 ### After
 - Overall Statement Coverage: 84.63% ✓
 - Overall Branch Coverage: 71.08% ✓
-- Total Tests: 93 (+12 new tests)
+- Total Tests: 84 (+3 new tests, register endpoint removed)
 - Test Suites: 9
 
 ## Key Improvements by Controller
@@ -25,15 +25,8 @@ Successfully improved test coverage for the Flying Club API with a focus on erro
 - **Improvement**: +15.21%
 
 #### New Tests Added:
-1. ✓ POST /api/users/register fails with duplicate email
-2. ✓ POST /api/users/register fails when missing email
-3. ✓ POST /api/users/register fails when missing password
-4. ✓ POST /api/users/register fails when missing first_name
-5. ✓ POST /api/users/register fails when missing last_name
-6. ✓ POST /api/users/register creates member role by default
-7. ✓ POST /api/users/register accepts custom role
-8. ✓ POST /api/users/register includes phone if provided
-9. ✓ POST /api/users/login succeeds with valid credentials
+1. ✓ POST /api/users/register returns 404 (endpoint removed)
+2. ✓ POST /api/users/login succeeds with valid credentials
 10. ✓ POST /api/users/login fails with invalid email
 11. ✓ POST /api/users/login fails with wrong password
 12. ✓ GET /api/users/profile includes role in response
@@ -55,7 +48,7 @@ Successfully improved test coverage for the Flying Club API with a focus on erro
 3. **Password Validation**: Complete password validation paths now tested
 
 ### New Test Coverage Areas
-1. **Duplicate Email Detection**: Ensures users cannot register with existing email
+1. **Duplicate Email Detection**: Ensures duplicate emails are rejected when creating members
 2. **Required Field Validation**: All required fields now tested for POST endpoints
 3. **Password Matching**: Login failures with incorrect passwords properly tested
 4. **Role Management**: Default and custom role assignment tested
@@ -69,8 +62,8 @@ Successfully improved test coverage for the Flying Club API with a focus on erro
 ## Test Quality Metrics
 
 ### Passing Tests
-- **Total**: 93 tests (100% passing)
-- **Auth Tests**: 16 tests (all passing)
+- **Total**: 84 tests (100% passing)
+- **Auth Tests**: 7 tests (all passing)
 - **Utility Tests**: 12 tests (all passing)
 - **Billing Tests**: 15 tests (all passing)
 - **Flight Logs Tests**: 8 tests (all passing)
@@ -132,4 +125,4 @@ npm test -- --watch
 
 ## Conclusion
 
-The test coverage improvements focus on the most critical area: authentication and authorization. The authentication controller's coverage improved by 15.21%, bringing overall test quality significantly higher. The suite now has 93 comprehensive tests covering edge cases, error conditions, and validation logic.
+The test coverage improvements focus on the most critical area: authentication and authorization. The authentication controller's coverage improved by 15.21%, bringing overall test quality significantly higher. The suite now has 84 comprehensive tests covering edge cases, error conditions, and validation logic. The unprotected register endpoint was removed as a security improvement, with member creation now exclusively handled through the admin-only POST /api/members endpoint.
