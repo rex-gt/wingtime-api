@@ -36,7 +36,8 @@ jobs:
         run: npm install -g @railway/cli
 
       - name: Deploy to Staging
-        run: railway up --service aerobook-api --detach
+        # Use explicit Service ID and Project ID for more reliable scoping
+        run: railway up --service ff25070e-e565-4f3c-860a-5ccd71ef8d0b --project 4c8f69a6-e256-4e4f-8a8e-d800655556ce --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_STAGING }}
 
@@ -52,6 +53,7 @@ jobs:
         run: npm install -g @railway/cli
 
       - name: Deploy to Production
-        run: railway up --service aerobook-api --detach
+        # Use explicit Service ID and Project ID for more reliable scoping
+        run: railway up --service ff25070e-e565-4f3c-860a-5ccd71ef8d0b --project 4c8f69a6-e256-4e4f-8a8e-d800655556ce --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PRODUCTION }}
