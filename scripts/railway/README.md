@@ -20,21 +20,6 @@ Scripts to manage Railway environment variables and deployments from your local 
    railway link
    ```
 
-## Multi-Environment Strategy
-
-AeroBook API uses a 3-tier environment setup:
-
-1. **Local**: Development on your local machine using `.env.local`.
-2. **Staging**: Railway environment for testing (`staging` branch).
-3. **Production**: Railway environment for live users (`main` branch).
-
-### Configuration Files
-
-Each environment has its own configuration file (gitignored):
-- `.env.local`: Local development
-- `.env.staging`: Staging configuration
-- `.env.production`: Production configuration
-
 ## Available Scripts
 
 All scripts can be run directly from the project root using `npm`.
@@ -69,32 +54,58 @@ npm run railway:setup -- production
 ### 2. Manual Deployment
 
 ```bash
-# Deploy to staging
-npm run railway:deploy -- staging
+# Configure app/frontend settings only
+./scripts/railway/setup-app.sh
 
-# Deploy to production
-npm run railway:deploy -- production
+# Configure email only
+./scripts/railway/setup-email.sh
+
+# Generate new security secrets
+./scripts/railway/setup-secrets.sh
+
+# View current configuration
+./scripts/railway/view-vars.sh
 ```
 
-## GitHub Actions Automated Deployment
+## Environment Variables
 
-Pushing to specific branches will automatically deploy to the corresponding Railway environment:
+### Required Variables
 
-- Push to **`staging`** -> Deploys to Railway **staging** environment.
-- Push to **`main`** -> Deploys to Railway **production** environment.
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `APP_URL` | Frontend application URL | `https://aerobook.app` |
+| `ALLOWED_ORIGINS` | CORS allowed origins | `https://aerobook.app,https://staging.aerobook.app` |
+| `JWT_SECRET` | Secret for JWT tokens | Auto-generated |
+| `RESET_TOKEN_SECRET` | Secret for password reset tokens | Auto-generated |
+| `RESEND_API_KEY` | Resend API key | `re_xxxxxxxxx` |
+| `RESEND_FROM` | Email sender address | `AeroBook <noreply@aerobook.app>` |
 
-**Requirement**: You must add two Railway tokens to your GitHub Repository Secrets. **CRITICAL: When creating tokens, select the `aerobook-api` service.**
+### Auto-Provided by Railway
 
-1.  **`RAILWAY_TOKEN_STAGING`**: 
-    -   In Railway Dashboard -> Settings -> Tokens.
-    -   Environment: **staging**
-    -   Service: **aerobook-api**
-2.  **`RAILWAY_TOKEN_PRODUCTION`**: 
-    -   In Railway Dashboard -> Settings -> Tokens.
-    -   Environment: **production**
-    -   Service: **aerobook-api**
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | PostgreSQL connection string (when DB attached) |
+| `RAILWAY_*` | Railway system variables |
 
-Add these to GitHub: Settings -> Secrets and variables -> Actions -> New repository secret.
+## Resend Email Setup
+
+1. **Create a Resend account:** https://resend.com
+
+2. **Get your API key:** https://resend.com/api-keys
+
+3. **Verify your domain:** https://resend.com/domains
+   - Add DNS records as instructed
+   - Or use `onboarding@resend.dev` for testing (your email only)
+
+4. **Run the setup script:**
+   ```bash
+   ./scripts/railway/setup-email.sh
+   ```
+
+5. **Test email sending:**
+   ```bash
+   ./scripts/railway/test-email.sh
+   ```
 
 ## Common Commands
 
