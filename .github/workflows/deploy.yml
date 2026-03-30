@@ -30,16 +30,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
       - name: Deploy to Staging
         if: github.ref == 'refs/heads/staging'
-        uses: railwayapp/github-action@v1
-        with:
-          railway_token: ${{ secrets.RAILWAY_TOKEN }}
-          environment: staging
+        run: railway up --environment staging --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
       - name: Deploy to Production
         if: github.ref == 'refs/heads/production'
-        uses: railwayapp/github-action@v1
-        with:
-          railway_token: ${{ secrets.RAILWAY_TOKEN }}
-          environment: production
+        run: railway up --environment production --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
