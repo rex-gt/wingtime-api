@@ -35,12 +35,12 @@ jobs:
 
       - name: Deploy to Staging
         if: github.ref == 'refs/heads/staging'
-        run: railway up --environment staging --detach
+        run: railway up --service aerobook-api --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_STAGING }}
 
       - name: Deploy to Production
         if: github.ref == 'refs/heads/production'
-        run: railway up --environment production --detach
+        run: railway up --service aerobook-api --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PRODUCTION }}
