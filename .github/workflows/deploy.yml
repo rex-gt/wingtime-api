@@ -35,21 +35,10 @@ jobs:
       - name: Install Railway CLI
         run: npm install -g @railway/cli
 
-      - name: Verify Token Presence
-        run: |
-          if [ -z "$RAILWAY_TOKEN" ]; then
-            echo "❌ ERROR: RAILWAY_TOKEN is empty. Check GitHub Environment Secrets."
-            exit 1
-          else
-            echo "✅ RAILWAY_TOKEN is present."
-          fi
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_STAGING }}
-
       - name: Deploy to Staging
         run: railway up --service aerobook-api --environment staging --detach
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_STAGING }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
   deploy-production:
     needs: test
@@ -62,18 +51,7 @@ jobs:
       - name: Install Railway CLI
         run: npm install -g @railway/cli
 
-      - name: Verify Token Presence
-        run: |
-          if [ -z "$RAILWAY_TOKEN" ]; then
-            echo "❌ ERROR: RAILWAY_TOKEN is empty. Check GitHub Environment Secrets."
-            exit 1
-          else
-            echo "✅ RAILWAY_TOKEN is present."
-          fi
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PRODUCTION }}
-
       - name: Deploy to Production
         run: railway up --service aerobook-api --environment production --detach
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PRODUCTION }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
