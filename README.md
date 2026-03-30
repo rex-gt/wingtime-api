@@ -49,8 +49,21 @@ aerobook-api/
 ├── index.js                     # Application entry point (HTTP/HTTPS server)
 ├── package.json                 # Dependencies and scripts
 ├── .env.example                 # Environment variables template
+├── .env.local                   # Local env variables (gitignored)
+├── .env.staging                 # Staging env variables (gitignored)
+├── .env.production              # Production env variables (gitignored)
 └── README.md                    # This file
 ```
+
+## 3-Tier Environment Strategy
+
+This project uses a 3-tier environment strategy:
+
+1. **Local**: Development on local machine using `.env.local`.
+2. **Staging**: Railway environment for testing (`staging` branch).
+3. **Production**: Railway environment for live users (`production` branch).
+
+Deployment is automated via GitHub Actions (see `.github/workflows/deploy.yml`) and can be managed manually via scripts in `scripts/railway/`.
 
 ## Features
 
@@ -144,8 +157,8 @@ psql -d flying_club -f db/sample-data.sql
 
 5. Configure environment variables:
 ```bash
-cp .env.example .env
-# Edit .env with your database credentials and JWT_SECRET
+cp .env.example .env.local
+# Edit .env.local with your database credentials and JWT_SECRET
 ```
 
 Required variables:
@@ -961,7 +974,7 @@ openssl x509 -req -days 365 -in server.csr \
   -signkey server.key -out server.crt
 ```
 
-2. Add environment variables to `.env`:
+2. Add environment variables to `.env.local`:
 ```
 SSL_KEY_PATH=/path/to/server.key
 SSL_CERT_PATH=/path/to/server.crt

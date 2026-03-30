@@ -1,5 +1,7 @@
 const { Pool, types } = require('pg');
+const path = require('path');
 require('dotenv').config();
+require('dotenv').config({ path: path.resolve(process.cwd(), '.env.local'), override: true });
 
 // TIMESTAMP WITHOUT TIME ZONE (OID 1114) — this app always writes UTC values,
 // but pg interprets bare timestamp strings as local time, shifting dates by the

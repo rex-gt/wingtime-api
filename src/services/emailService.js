@@ -1,7 +1,8 @@
 const { Resend } = require('resend');
 const jwt = require('jsonwebtoken');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Fallback to a dummy key prevents the Resend constructor from throwing during tests
+const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key_for_testing');
 
 const sendWelcomeEmail = async (user) => {
     const appUrl = process.env.APP_URL || 'https://localhost:5173';

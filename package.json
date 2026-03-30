@@ -9,7 +9,14 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "railway:setup": "./scripts/railway/setup-full.sh",
+    "railway:setup-vars": "./scripts/railway/setup-env-vars.sh",
+    "railway:setup-db": "./scripts/railway/setup-db.sh",
+    "railway:deploy": "./scripts/railway/deploy.sh",
+    "railway:view-vars": "./scripts/railway/view-vars.sh",
+    "railway:test-email": "./scripts/railway/test-email.sh",
+    "railway:reset": "./scripts/railway/reset-all.sh"
   },
   "keywords": [
     "aviation",

@@ -1,6 +1,6 @@
 # Railway CLI Scripts for AeroBook
 
-Scripts to manage Railway environment variables and deployments from your local CLI.
+Scripts to manage Railway environment variables and deployments from your local CLI across multiple environments (local, staging, production).
 
 ## Prerequisites
 
@@ -20,207 +20,128 @@ Scripts to manage Railway environment variables and deployments from your local 
    railway link
    ```
 
+## Multi-Environment Strategy
+
+AeroBook API uses a 3-tier environment setup:
+
+1. **Local**: Development on your local machine using `.env.local`.
+2. **Staging**: Railway environment for testing (`staging` branch).
+3. **Production**: Railway environment for live users (`production` branch).
+
+### Configuration Files
+
+Each environment has its own configuration file (gitignored):
+- `.env.local`: Local development
+- `.env.staging`: Staging configuration
+- `.env.production`: Production configuration
+
 ## Available Scripts
 
-### Setup Scripts
-| Script | Description |
-|--------|-------------|
-| `setup-full.sh` | Complete environment setup (app, secrets, email) - **recommended for new projects** |
-| `setup-app.sh` | Configure frontend URL and CORS settings only |
-| `setup-email.sh` | Configure Resend email service only |
-| `setup-secrets.sh` | Generate JWT and security secrets only |
+All scripts can be run directly from the project root using `npm`.
 
-### Utility Scripts
-| Script | Description |
-|--------|-------------|
-| `view-vars.sh` | View all environment variables organized by category |
-| `test-email.sh` | Send a test email to verify configuration |
+### Setup & Deployment Scripts
+| Script | Description | NPM Command |
+|--------|-------------|-------------|
+| `setup-full.sh <env>` | Complete environment setup | `npm run railway:setup -- <env>` |
+| `setup-env-vars.sh <env>` | Syncs `.env.<env>` to Railway | `npm run railway:setup-vars -- <env>` |
+| `setup-db.sh <env>` | Initializes database schema | `npm run railway:setup-db -- <env>` |
+| `deploy.sh <env>` | Deploys current branch to Railway | `npm run railway:deploy -- <env>` |
+| `view-vars.sh` | View environment variables | `npm run railway:view-vars` |
 
-### Reset Scripts
-| Script | Description |
-|--------|-------------|
-| `reset-email.sh` | Remove Resend email configuration only |
-| `reset-all.sh` | Remove ALL custom variables (start fresh) |
+### Utility & Reset Scripts
+| Script | Description | NPM Command |
+|--------|-------------|-------------|
+| `test-email.sh` | Send a test email | `npm run railway:test-email` |
+| `reset-all.sh` | Remove ALL custom variables | `npm run railway:reset` |
 
 ## Quick Start
 
-### New Project Setup
+### 1. Initial Environment Setup
 
 ```bash
-# Make all scripts executable
-chmod +x scripts/railway/*.sh
+# Setup Staging
+npm run railway:setup -- staging
 
-# Run the complete setup (recommended)
-./scripts/railway/setup-full.sh
+# Setup Production
+npm run railway:setup -- production
 ```
 
-This will configure:
-- Frontend URL and CORS origins
-- JWT and security secrets
-- Resend email configuration
-- Clean up any legacy variables
-
-### Individual Setup Scripts
+### 2. Manual Deployment
 
 ```bash
-# Configure app/frontend settings only
-./scripts/railway/setup-app.sh
+# Deploy to staging
+npm run railway:deploy -- staging
 
-# Configure email only
-./scripts/railway/setup-email.sh
-
-# Generate new security secrets
-./scripts/railway/setup-secrets.sh
-
-# View current configuration
-./scripts/railway/view-vars.sh
+# Deploy to production
+npm run railway:deploy -- production
 ```
 
-## Environment Variables
+## GitHub Actions Automated Deployment
 
-### Required Variables
+Pushing to specific branches will automatically deploy to the corresponding Railway environment:
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `APP_URL` | Frontend application URL | `https://aerobook.app` |
-| `ALLOWED_ORIGINS` | CORS allowed origins | `https://aerobook.app,https://staging.aerobook.app` |
-| `JWT_SECRET` | Secret for JWT tokens | Auto-generated |
-| `RESET_TOKEN_SECRET` | Secret for password reset tokens | Auto-generated |
-| `RESEND_API_KEY` | Resend API key | `re_xxxxxxxxx` |
-| `RESEND_FROM` | Email sender address | `AeroBook <noreply@aerobook.app>` |
+- Push to **`staging`** -> Deploys to Railway **staging** environment.
+- Push to **`production`** -> Deploys to Railway **production** environment.
 
-### Auto-Provided by Railway
+**Requirement**: You must add two Railway tokens to your GitHub Repository Secrets. **CRITICAL: When creating tokens, select the `aerobook-api` service.**
 
-| Variable | Description |
-|----------|-------------|
-| `DATABASE_URL` | PostgreSQL connection string (when DB attached) |
-| `RAILWAY_*` | Railway system variables |
+1.  **`RAILWAY_TOKEN_STAGING`**: 
+    -   In Railway Dashboard -> Settings -> Tokens.
+    -   Environment: **staging**
+    -   Service: **aerobook-api**
+2.  **`RAILWAY_TOKEN_PRODUCTION`**: 
+    -   In Railway Dashboard -> Settings -> Tokens.
+    -   Environment: **production**
+    -   Service: **aerobook-api**
 
-## Resend Email Setup
-
-1. **Create a Resend account:** https://resend.com
-
-2. **Get your API key:** https://resend.com/api-keys
-
-3. **Verify your domain:** https://resend.com/domains
-   - Add DNS records as instructed
-   - Or use `onboarding@resend.dev` for testing (your email only)
-
-4. **Run the setup script:**
-   ```bash
-   ./scripts/railway/setup-email.sh
-   ```
-
-5. **Test email sending:**
-   ```bash
-   ./scripts/railway/test-email.sh
-   ```
+Add these to GitHub: Settings -> Secrets and variables -> Actions -> New repository secret.
 
 ## Common Commands
 
 ```bash
-# View current project
+# Switch environment in CLI
+railway env staging
+
+# View current project and environment
 railway status
 
-# View all variables
-railway variables
-
-# Set a single variable
-railway variables set KEY=value
-
-# Delete a variable
-railway variables delete KEY --yes
-
-# View logs
-railway logs
+# View logs for an environment
+railway logs --environment staging
 
 # Live log stream
-railway logs --follow
+railway logs --follow --environment production
 
 # Open Railway dashboard
 railway open
-
-# Deploy immediately
-railway up
-
-# Run a command with Railway env vars
-railway run npm test
 ```
 
 ## Troubleshooting
 
-### "Railway CLI not found"
-```bash
-brew install railway
-```
+### "Environment file not found"
+Ensure you have created the required `.env.staging` or `.env.production` files in the project root. Use `.env.example` as a template.
 
-### "Not logged in"
-```bash
-railway login
-```
+### CORS Issues
+If your frontend cannot connect to the API, verify the `ALLOWED_ORIGINS` in your `.env.<env>` file and run `./scripts/railway/setup-env-vars.sh <env>` again.
 
-### "Not linked to project"
-```bash
-railway link
-```
-
-### Email not sending
-
-1. **Check logs:**
-   ```bash
-   railway logs | grep -i email
-   ```
-
-2. **Verify variables:**
-   ```bash
-   ./scripts/railway/view-vars.sh
-   ```
-
-3. **Test locally with Railway env:**
-   ```bash
-   railway run node -e "
-     const {sendWelcomeEmail} = require('./src/services/emailService');
-     sendWelcomeEmail({id:1, first_name:'Test', email:'your@email.com'})
-       .then(() => console.log('Sent!'))
-       .catch(e => console.error(e));
-   "
-   ```
-
-### Clean up legacy variables
-
-If you have old SMTP or DB_ variables from a previous configuration:
-
-```bash
-./scripts/railway/cleanup-legacy-vars.sh
-```
+- **Staging**: Should include `*.vercel.app` and your preview domain.
+- **Production**: Should include your production domain (e.g., `aerobook.app`).
 
 ## File Structure
 
 ```
 scripts/railway/
 ├── README.md           # This file
-├── setup-full.sh       # Complete environment setup
-├── setup-app.sh        # Frontend/CORS configuration
-├── setup-email.sh      # Resend email configuration
-├── setup-secrets.sh    # JWT/security secrets
-├── view-vars.sh        # View all variables
+├── setup-full.sh       # Multi-environment setup (syncs .env + secrets)
+├── setup-env-vars.sh   # Syncs variables from .env.<env> to Railway
+├── setup-db.sh         # Initializes database schema and sample data
+├── deploy.sh           # Manual deployment script
+├── view-vars.sh        # View variables for current env
 ├── test-email.sh       # Test email sending
-├── reset-email.sh      # Remove email config only
 └── reset-all.sh        # Remove ALL custom config
 ```
 
 ## Security Best Practices
 
-1. **Never commit secrets to Git** - Use Railway variables for all secrets
-
-2. **Use different environments** - Create staging/production environments in Railway
-
-3. **Rotate secrets periodically** - Run `setup-secrets.sh` to regenerate
-
-4. **Monitor logs** - Check Railway logs for errors regularly
-
-## Links
-
-- [Railway Documentation](https://docs.railway.app/)
-- [Railway CLI Reference](https://docs.railway.app/develop/cli)
-- [Resend Documentation](https://resend.com/docs)
+1. **Never commit `.env.*` files to Git** - They are included in `.gitignore`.
+2. **Rotate secrets periodically** - Run `setup-full.sh <env>` again to regenerate JWT secrets.
+3. **Use scoped tokens** - When setting up GitHub Actions, use a project-specific Railway token.

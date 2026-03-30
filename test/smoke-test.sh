@@ -27,9 +27,9 @@ check() {
 
 # ── Auth ────────────────────────────────────────────────────────────────────
 
-# Use seeded admin credentials (configurable via environment variables)
-EMAIL="${SMOKE_ADMIN_EMAIL:-admin@aerobook.app}"
-PASSWORD="${SMOKE_ADMIN_PASSWORD:-admin123}"
+# Use seeded admin credentials (from db/sample-data.sql)
+EMAIL="${SMOKE_ADMIN_EMAIL:-john.doe@example.com}"
+PASSWORD="${SMOKE_ADMIN_PASSWORD:-password123}"
 
 # Verify register endpoint is removed (should return 404)
 STATUS=$($CURL -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/api/users/register" \
