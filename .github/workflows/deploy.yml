@@ -28,54 +28,30 @@ jobs:
     needs: test
     if: github.ref == 'refs/heads/staging'
     runs-on: ubuntu-latest
-    environment: staging
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Railway CLI
         run: npm install -g @railway/cli
 
-      - name: Diagnostic - Check Token
-        run: |
-          if [ -z "$RAILWAY_TOKEN" ]; then
-            echo "❌ ERROR: RAILWAY_TOKEN is not being injected into this job."
-            exit 1
-          else
-            echo "✅ RAILWAY_TOKEN is present (length: ${#RAILWAY_TOKEN})"
-          fi
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
       - name: Deploy to Staging
-        # Project Tokens already contain environment and project info. 
-        # We specify service ID to be absolutely certain.
+        # Use explicit Service ID
         run: railway up --service ff25070e-e565-4f3c-860a-5ccd71ef8d0b --detach
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_STAGING }}
 
   deploy-production:
     needs: test
     if: github.ref == 'refs/heads/production'
     runs-on: ubuntu-latest
-    environment: production
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Railway CLI
         run: npm install -g @railway/cli
 
-      - name: Diagnostic - Check Token
-        run: |
-          if [ -z "$RAILWAY_TOKEN" ]; then
-            echo "❌ ERROR: RAILWAY_TOKEN is not being injected into this job."
-            exit 1
-          else
-            echo "✅ RAILWAY_TOKEN is present (length: ${#RAILWAY_TOKEN})"
-          fi
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
       - name: Deploy to Production
+        # Use explicit Service ID
         run: railway up --service ff25070e-e565-4f3c-860a-5ccd71ef8d0b --detach
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PRODUCTION }}
