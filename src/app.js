@@ -14,7 +14,7 @@ const cors = require('cors');
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
-  : ['http://localhost:5173', 'http://localhost:4200', 'https://aerobook.app'];
+  : ['http://localhost:5173', 'https://localhost:5173', 'http://localhost:4200', 'https://aerobook.app'];
 
 function isOriginAllowed(origin) {
   // Exact match
