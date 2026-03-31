@@ -22,7 +22,7 @@ jest.mock('pg', () => {
   const mPool = {
     query: (text, params) => {
       const lt = (text || '').toLowerCase();
-      if (lt.includes('select id from members where email')) {
+      if (lt.includes('from members where email')) {
         // simulate no existing user on register, and existing user for login
         if (params && params[0] === 'exists@example.com') {
           return Promise.resolve({ rows: [{ id: 5, email: 'exists@example.com', password: '$2a$10$hash', role: 'pilot', first_name: 'Ex', last_name: 'Ist' }] });
@@ -280,5 +280,26 @@ describe('Auth endpoints', () => {
     const res = await httpRequest(port, '/api/users/reset-password', 'POST', payload);
     expect(res.statusCode).toBe(400);
     expect(res.body).toHaveProperty('message', 'Invalid reset token');
+  });
+
+  test('POST /api/users/forgot-password succeeds with registered email', async () => {
+    const payload = { email: 'exists@example.com' };
+    const res = await httpRequest(port, '/api/users/forgot-password', 'POST', payload);
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toHaveProperty('message', 'Password reset email sent');
+  });
+
+  test('POST /api/users/forgot-password fails with unregistered email', async () => {
+    const payload = { email: 'nonexistent@example.com' };
+    const res = await httpRequest(port, '/api/users/forgot-password', 'POST', payload);
+    expect(res.statusCode).toBe(404);
+    expect(res.body).toHaveProperty('message', 'User not found');
+  });
+
+  test('POST /api/users/forgot-password fails with missing email', async () => {
+    const payload = {};
+    const res = await httpRequest(port, '/api/users/forgot-password', 'POST', payload);
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toHaveProperty('message', 'Email is required');
   });
 });

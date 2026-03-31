@@ -204,6 +204,7 @@ All endpoints require a valid JWT (`Authorization: Bearer <token>`). Role requir
 | Endpoint | Method | Required Role |
 |----------|--------|---------------|
 | `/api/users/login` | POST | Public |
+| `/api/users/forgot-password` | POST | Public |
 | `/api/users/reset-password` | POST | Public |
 | `/api/users/profile` | GET / PUT | Any authenticated |
 | `/api/members` | GET | admin, operator |
@@ -415,6 +416,30 @@ curl -X POST http://localhost:3000/api/users/reset-password \
 - `400` - Invalid reset token
 - `400` - Reset token has expired. Please request a new one.
 - `404` - User not found
+
+#### POST /api/users/forgot-password
+Request a password reset link via email
+```bash
+curl -X POST http://localhost:3000/api/users/forgot-password \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com"}'
+```
+
+**Request Body:**
+- `email` (required): User's registered email address
+
+**Response (success):**
+```json
+{
+  "message": "Password reset email sent"
+}
+```
+
+**Error responses:**
+- `400` - Email is required
+- `404` - User not found (email not registered)
+
+**Security Note:** The reset link sent via this endpoint expires in **10 minutes**.
 
 #### GET /api/users/profile
 Get current user's profile

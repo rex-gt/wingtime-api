@@ -32,6 +32,7 @@ describe('Email Service', () => {
     // Now require the email service (after mocks are set up)
     const emailService = require('../src/services/emailService');
     sendWelcomeEmail = emailService.sendWelcomeEmail;
+    sendPasswordResetEmail = emailService.sendPasswordResetEmail;
   });
 
   test('sendWelcomeEmail should send email with correct structure', async () => {
@@ -253,5 +254,42 @@ describe('Email Service', () => {
     };
 
     await expect(sendWelcomeEmail(user)).rejects.toThrow('Resend API error');
+  });
+
+  test('sendPasswordResetEmail should send email with correct structure', async () => {
+    const user = {
+      id: 1,
+      first_name: 'John',
+      last_name: 'Doe',
+      email: 'john@example.com'
+    };
+
+    await sendPasswordResetEmail(user);
+
+    expect(mockSend).toHaveBeenCalledTimes(1);
+
+    const emailCall = mockSend.mock.calls[0][0];
+    expect(emailCall.to).toBe('john@example.com');
+    expect(emailCall.subject).toBe('Password Reset Request');
+    expect(emailCall.html).toContain('Hello John,');
+    expect(emailCall.html).toContain('Reset your AeroBook password');
+    expect(emailCall.html).toContain('10 minutes');
+  });
+
+  test('sendPasswordResetEmail should generate JWT reset token with 10m expiration', async () => {
+    const user = {
+      id: 7,
+      first_name: 'Carol',
+      last_name: 'Williams',
+      email: 'carol@example.com'
+    };
+
+    await sendPasswordResetEmail(user);
+
+    expect(jwt.sign).toHaveBeenCalledWith(
+      { id: 7, purpose: 'password-reset' },
+      'test-secret',
+      { expiresIn: '10m' }
+    );
   });
 });

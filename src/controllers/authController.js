@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const pool = require('../config/database');
+const emailService = require('../services/emailService');
 
 const loginUser = async (req, res) => {
     const { email, password } = req.body;
@@ -173,4 +174,28 @@ const resetPassword = async (req, res) => {
     }
 };
 
-module.exports = { loginUser, getProfile, updateProfile, resetPassword };
+const forgotPassword = async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+        return res.status(400).json({ message: 'Email is required' });
+    }
+
+    try {
+        const result = await pool.query('SELECT id, first_name, email FROM members WHERE email = $1', [email]);
+        const user = result.rows[0];
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        await emailService.sendPasswordResetEmail(user);
+
+        res.json({ message: 'Password reset email sent' });
+    } catch (err) {
+        console.error('Forgot password error:', err);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+module.exports = { loginUser, getProfile, updateProfile, resetPassword, forgotPassword };
