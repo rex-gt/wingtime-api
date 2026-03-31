@@ -12,6 +12,12 @@ const bodyParser = require('body-parser');
 const app = express();
 const cors = require('cors');
 
+// Debug logging for connectivity issues
+app.use((req, res, next) => {
+  console.log(`[DEBUG] Incoming Request: ${req.method} ${req.url} from ${req.headers.origin || 'No Origin'}`);
+  next();
+});
+
 const defaultOrigins = [
   'http://localhost:5173',
   'https://localhost:5173',
