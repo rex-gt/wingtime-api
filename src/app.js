@@ -12,9 +12,19 @@ const bodyParser = require('body-parser');
 const app = express();
 const cors = require('cors');
 
-const allowedOrigins = process.env.ALLOWED_ORIGINS
+const defaultOrigins = [
+  'http://localhost:5173',
+  'https://localhost:5173',
+  'http://localhost:4200',
+  'https://aerobook.app',
+  'https://preview.aerobook.app'
+];
+
+const envOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
-  : ['http://localhost:5173', 'https://localhost:5173', 'http://localhost:4200', 'https://aerobook.app', 'https://preview.aerobook.app'];
+  : [];
+
+const allowedOrigins = [...new Set([...defaultOrigins, ...envOrigins])];
 
 function isOriginAllowed(origin) {
   // Exact match
