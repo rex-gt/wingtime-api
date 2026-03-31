@@ -37,7 +37,8 @@ jobs:
         run: npm install -g @railway/cli
 
       - name: Deploy to Staging
-        run: railway up --environment staging --detach
+        # Using explicit Service ID to avoid ambiguity
+        run: railway up --service ff25070e-e565-4f3c-860a-5ccd71ef8d0b --environment staging --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_STAGING }}
 
@@ -53,6 +54,7 @@ jobs:
         run: npm install -g @railway/cli
 
       - name: Deploy to Production
-        run: railway up --environment production --detach
+        # Using explicit Service ID to avoid ambiguity
+        run: railway up --service ff25070e-e565-4f3c-860a-5ccd71ef8d0b --environment production --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PRODUCTION }}
