@@ -124,6 +124,12 @@ describe('Reservations endpoint', () => {
     expect(res.body[0]).toHaveProperty('id');
   });
 
+  test('GET /api/reservations with filters returns a list', async () => {
+    const res = await httpRequest(port, '/api/reservations?member_id=1&status=scheduled', 'GET', null, { Authorization: 'Bearer faketoken' });
+    expect(res.statusCode).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+  });
+
   test('GET /api/reservations/:id returns a reservation', async () => {
     const res = await httpRequest(port, '/api/reservations/1', 'GET', null, { Authorization: 'Bearer faketoken' });
     expect(res.statusCode).toBe(200);

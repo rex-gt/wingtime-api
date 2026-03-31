@@ -83,7 +83,7 @@ The project follows a clean, modular architecture with proper separation of conc
 - **Middleware** handles JWT authentication (`protect`) and role-based authorization (`authorize`)
 
 ### CORS Configuration
-`app.js` supports configurable allowed origins via the `ALLOWED_ORIGINS` environment variable. It supports exact matches and wildcard patterns (e.g., `*.vercel.app`). Defaults to `http://localhost:5173`, `http://localhost:4200`, and `https://aerobook.app`.
+`app.js` supports configurable allowed origins via the `ALLOWED_ORIGINS` environment variable. The system **merges** these environment-provided origins with a baseline of required defaults (e.g., localhost, preview.aerobook.app). It supports exact matches and wildcard patterns (e.g., `*.vercel.app`).
 
 ### File Organization
 - `index.js` - HTTP/HTTPS server entry point; reads SSL certs if configured
@@ -519,9 +519,15 @@ curl -X POST http://localhost:3000/api/members \
     "email": "john.doe@example.com",
     "phone": "555-0100",
     "password": "password123",
-    "role": "member"
+    "role": "member",
+    "skip_welcome_email": true
   }'
 ```
+
+**Request Body:**
+- `first_name`, `last_name`, `email`, `password` (required)
+- `member_number`, `phone`, `role` (optional)
+- `skip_welcome_email` (optional, boolean): If true, suppresses the automated welcome email.
 
 #### PUT /api/members/:id
 Update member
