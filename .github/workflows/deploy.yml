@@ -8,6 +8,7 @@ on:
 
 jobs:
   test:
+    name: Run Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,7 +16,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           
       - name: Install dependencies
@@ -25,6 +26,7 @@ jobs:
         run: npm test
 
   deploy-staging:
+    name: Deploy to Staging
     needs: test
     if: github.ref == 'refs/heads/staging'
     runs-on: ubuntu-latest
@@ -35,12 +37,12 @@ jobs:
         run: npm install -g @railway/cli
 
       - name: Deploy to Staging
-        # Use explicit Service ID
-        run: railway up --service ff25070e-e565-4f3c-860a-5ccd71ef8d0b --detach
+        run: railway up --environment staging --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_STAGING }}
 
   deploy-production:
+    name: Deploy to Production
     needs: test
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -51,7 +53,6 @@ jobs:
         run: npm install -g @railway/cli
 
       - name: Deploy to Production
-        # Use explicit Service ID
-        run: railway up --service ff25070e-e565-4f3c-860a-5ccd71ef8d0b --detach
+        run: railway up --environment production --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PRODUCTION }}
