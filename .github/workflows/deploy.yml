@@ -4,7 +4,9 @@ on:
   push:
     branches:
       - main
-
+  # This adds the "Run workflow" button in the GitHub Actions UI
+  workflow_dispatch:
+    
 jobs:
   test:
     name: Run Tests
@@ -40,3 +42,20 @@ jobs:
         run: railway up --service ff25070e-e565-4f3c-860a-5ccd71ef8d0b --environment staging --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_STAGING }}
+
+  deploy-production:
+    name: Promote to Production
+    # This only runs if you manually click the button in GitHub
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to Production
+        # Using explicit Service ID to avoid ambiguity
+        run: railway up --service ff25070e-e565-4f3c-860a-5ccd71ef8d0b --environment production --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PRODUCTION }}
