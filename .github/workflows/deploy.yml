@@ -1,9 +1,8 @@
-name: Deploy to Railway
+name: Test and Deploy to Railway
 
 on:
   push:
     branches:
-      - staging
       - main
 
 jobs:
@@ -26,9 +25,9 @@ jobs:
         run: npm test
 
   deploy-staging:
-    name: Deploy to Staging
+    name: Deploy to Railway Staging
     needs: test
-    if: github.ref == 'refs/heads/staging'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -41,20 +40,3 @@ jobs:
         run: railway up --service ff25070e-e565-4f3c-860a-5ccd71ef8d0b --environment staging --detach
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_STAGING }}
-
-  deploy-production:
-    name: Deploy to Production
-    needs: test
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
-
-      - name: Deploy to Production
-        # Using explicit Service ID to avoid ambiguity
-        run: railway up --service ff25070e-e565-4f3c-860a-5ccd71ef8d0b --environment production --detach
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PRODUCTION }}
