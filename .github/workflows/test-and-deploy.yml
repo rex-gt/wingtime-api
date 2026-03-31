@@ -29,7 +29,8 @@ jobs:
   deploy-staging:
     name: Deploy to Railway Staging
     needs: test
-    if: github.ref == 'refs/heads/main'
+    # ONLY run on push, NOT manual trigger
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -45,7 +46,7 @@ jobs:
 
   deploy-production:
     name: Promote to Production
-    # This only runs if you manually click the button in GitHub
+    # ONLY run on manual trigger, NOT push
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
