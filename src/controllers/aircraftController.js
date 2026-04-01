@@ -29,14 +29,14 @@ const createAircraft = async (req, res) => {
 
 const updateAircraft = async (req, res) => {
   const { id } = req.params;
-  const { make, model, year, hourly_rate, current_tach_hours, is_available } = req.body;
+  const { tail_number, make, model, year, hourly_rate, current_tach_hours, is_available } = req.body;
   const result = await pool.query(
     `UPDATE aircraft
-     SET make = $1, model = $2, year = $3, hourly_rate = $4,
-         current_tach_hours = $5, is_available = $6
-     WHERE id = $7
+     SET tail_number = $1, make = $2, model = $3, year = $4, hourly_rate = $5,
+         current_tach_hours = $6, is_available = $7
+     WHERE id = $8
      RETURNING *`,
-    [make, model, year, hourly_rate, current_tach_hours, is_available, id]
+    [tail_number, make, model, year, hourly_rate, current_tach_hours, is_available, id]
   );
   if (result.rows.length === 0) {
     return res.status(404).json({ error: 'Aircraft not found' });
