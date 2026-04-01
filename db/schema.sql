@@ -76,6 +76,17 @@ CREATE TABLE billing_records (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- API Keys table
+CREATE TABLE api_keys (
+    id SERIAL PRIMARY KEY,
+    key_value VARCHAR(64) UNIQUE NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    created_by INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for better query performance
 CREATE INDEX idx_reservations_member ON reservations(member_id);
 CREATE INDEX idx_reservations_aircraft ON reservations(aircraft_id);
@@ -110,4 +121,7 @@ CREATE TRIGGER update_flight_logs_updated_at BEFORE UPDATE ON flight_logs
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_billing_records_updated_at BEFORE UPDATE ON billing_records
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_api_keys_updated_at BEFORE UPDATE ON api_keys
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
