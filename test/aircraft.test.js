@@ -28,9 +28,9 @@ jest.mock('pg', () => {
         return Promise.resolve({ rows: [{ id, tail_number: 'N100', make: 'Piper', model: 'PA-28' }] });
       }
       if (lt.includes('update aircraft')) {
-        const idRaw = params && params[5];
+        const idRaw = params && params[7];
         const id = typeof idRaw === 'string' ? parseInt(idRaw, 10) : idRaw;
-        return Promise.resolve({ rows: [{ id, tail_number: 'N100', make: params[0], model: params[1] }] });
+        return Promise.resolve({ rows: [{ id, tail_number: params[0], make: params[1], model: params[2] }] });
       }
       if (lt.includes('delete from aircraft')) {
         const idRaw = params && params[0];
@@ -91,10 +91,17 @@ describe('Aircraft endpoints', () => {
   });
 
   test('PUT /api/aircraft/:id updates aircraft', async () => {
-    const payload = { make: 'Beech', model: 'Bonanza', year: 1999, hourly_rate: 150, current_tach_hours: 1200, is_available: true };
+    const payload = { tail_number: 'N100', make: 'Beech', model: 'Bonanza', year: 1999, hourly_rate: 150, current_tach_hours: 1200, is_available: true };
     const res = await httpRequest(port, '/api/aircraft/1', 'PUT', payload, { Authorization: 'Bearer faketoken' });
     expect(res.statusCode).toBe(200);
     expect(res.body).toHaveProperty('make', 'Beech');
+  });
+
+  test('PUT /api/aircraft/:id updates tail number', async () => {
+    const payload = { tail_number: 'NNEW', make: 'Beech', model: 'Bonanza', year: 1999, hourly_rate: 150, current_tach_hours: 1200, is_available: true };
+    const res = await httpRequest(port, '/api/aircraft/1', 'PUT', payload, { Authorization: 'Bearer faketoken' });
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toHaveProperty('tail_number', 'NNEW');
   });
 
   test('DELETE /api/aircraft/:id deletes aircraft', async () => {
