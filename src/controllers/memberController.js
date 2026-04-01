@@ -93,8 +93,8 @@ const updateMember = async (req, res) => {
     let paramCount = 1;
 
     // Define which fields each role can update
-    const allowedAdminFields = ['first_name', 'last_name', 'email', 'phone', 'is_active', 'role'];
-    const allowedMemberFields = ['first_name', 'last_name', 'email', 'phone'];
+    const allowedAdminFields = ['first_name', 'last_name', 'email', 'phone', 'is_active', 'role', 'reminder_hours'];
+    const allowedMemberFields = ['first_name', 'last_name', 'email', 'phone', 'reminder_hours'];
     const allowedFields = req.user.role === 'admin' ? allowedAdminFields : allowedMemberFields;
 
     // Build the update query dynamically

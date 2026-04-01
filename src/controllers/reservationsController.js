@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const emailService = require('../services/emailService');
 
 const getReservations = async (req, res) => {
   const { member_id, aircraft_id, status, start_date, end_date } = req.query;
@@ -202,10 +203,40 @@ const deleteReservation = async (req, res) => {
   res.json({ message: 'Reservation deleted successfully', reservation: result.rows[0] });
 };
 
+const processReminders = async () => {
+  try {
+    // Find scheduled reservations that:
+    // 1. Have not had a reminder sent
+    // 2. Start between NOW and NOW + reminder_hours
+    const result = await pool.query(`
+      SELECT r.*, m.first_name, m.email, m.reminder_hours, a.tail_number, a.make, a.model
+      FROM reservations r
+      JOIN members m ON r.member_id = m.id
+      JOIN aircraft a ON r.aircraft_id = a.id
+      WHERE r.status = 'scheduled'
+        AND r.reminder_sent = false
+        AND r.start_time > NOW()
+        AND r.start_time <= NOW() + (m.reminder_hours || ' hours')::interval
+    `);
+
+    for (const row of result.rows) {
+      console.log(`Sending reminder to ${row.email} for reservation ${row.id}`);
+      await emailService.sendReservationReminderEmail(
+        { first_name: row.first_name, email: row.email },
+        row
+      );
+      await pool.query('UPDATE reservations SET reminder_sent = true WHERE id = $1', [row.id]);
+    }
+  } catch (err) {
+    console.error('Error processing reminders:', err);
+  }
+};
+
 module.exports = {
   getReservations,
   getReservationById,
   createReservation,
   updateReservation,
   deleteReservation,
+  processReminders,
 };

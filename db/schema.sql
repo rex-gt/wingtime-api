@@ -11,6 +11,7 @@ CREATE TABLE members (
     password VARCHAR(255) NOT NULL, -- Store hashed passwords
     role VARCHAR(20) DEFAULT 'member' CHECK (role IN ('admin', 'operator', 'member')),
     is_active BOOLEAN DEFAULT true,
+    reminder_hours INTEGER DEFAULT 24,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -38,6 +39,7 @@ CREATE TABLE reservations (
     end_time TIMESTAMP NOT NULL,
     status VARCHAR(20) DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'in_progress', 'completed', 'cancelled')),
     notes TEXT,
+    reminder_sent BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT valid_time_range CHECK (end_time > start_time)

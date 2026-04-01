@@ -55,4 +55,29 @@ const sendPasswordResetEmail = async (user) => {
     });
 };
 
-module.exports = { sendWelcomeEmail, sendPasswordResetEmail };
+const sendReservationReminderEmail = async (user, reservation) => {
+    const appUrl = process.env.APP_URL || 'https://localhost:5173';
+    const dateStr = new Date(reservation.start_time).toLocaleString('en-US', {
+        weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+        hour: 'numeric', minute: '2-digit'
+    });
+
+    await resend.emails.send({
+        from: process.env.RESEND_FROM || 'AeroBook <noreply@aerobook.app>',
+        to: user.email,
+        subject: `Reminder: Upcoming Reservation for ${reservation.tail_number}`,
+        html: `
+            <h1>Upcoming Flight Reminder</h1>
+            <p>Hello ${user.first_name},</p>
+            <p>This is a reminder of your upcoming reservation for <strong>${reservation.tail_number}</strong>.</p>
+            <div style="background: #f0f9ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <p><strong>Start:</strong> ${dateStr}</p>
+                <p><strong>End:</strong> ${new Date(reservation.end_time).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' })}</p>
+            </div>
+            <p>We wish you a safe and pleasant flight!</p>
+            <p>View your reservations at <a href="${appUrl}">AeroBook</a>.</p>
+        `,
+    });
+};
+
+module.exports = { sendWelcomeEmail, sendPasswordResetEmail, sendReservationReminderEmail };
