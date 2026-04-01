@@ -28,9 +28,34 @@ if [ "$ENVIRONMENT" == "local" ]; then
     
     for FILE in "${ENV_FILES[@]}"; do
         if [ -f "$PROJECT_ROOT/$FILE" ]; then
+            # Try single URL first
             DB_URL=$(grep "^DATABASE_URL=" "$PROJECT_ROOT/$FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
-            if [ -n "$DB_URL" ]; then
+            
+            # If not found, try individual components
+            if [ -z "$DB_URL" ]; then
+                USER=$(grep "^DB_USER=" "$PROJECT_ROOT/$FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+                PASS=$(grep "^DB_PASSWORD=" "$PROJECT_ROOT/$FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+                HOST=$(grep "^DB_HOST=" "$PROJECT_ROOT/$FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+                NAME=$(grep "^DB_NAME=" "$PROJECT_ROOT/$FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+                PORT=$(grep "^DB_PORT=" "$PROJECT_ROOT/$FILE" | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+                
+                # Check if we have at least some components
+                if [ -n "$USER" ] || [ -n "$HOST" ] || [ -n "$NAME" ]; then
+                    # Fallback to defaults matching src/config/database.js
+                    USER=${USER:-postgres}
+                    PASS=${PASS:-password}
+                    HOST=${HOST:-localhost}
+                    NAME=${NAME:-flying_club}
+                    PORT=${PORT:-5432}
+                    
+                    DB_URL="postgresql://$USER:$PASS@$HOST:$PORT/$NAME"
+                    echo "✓ Constructed connection from components in $FILE"
+                fi
+            else
                 echo "✓ Loaded DATABASE_URL from $FILE"
+            fi
+            
+            if [ -n "$DB_URL" ]; then
                 break
             fi
         fi
