@@ -1,13 +1,15 @@
 const pool = require('../config/database');
 
 const getAircraftList = async (req, res) => {
-  const result = await pool.query('SELECT * FROM aircraft ORDER BY tail_number');
+  const { include_archived } = req.query;
+  const whereClause = include_archived === 'true' ? '' : 'WHERE is_archived = false';
+  const result = await pool.query(`SELECT * FROM aircraft ${whereClause} ORDER BY tail_number`);
   res.json(result.rows);
 };
 
 const getAircraftById = async (req, res) => {
   const { id } = req.params;
-  const result = await pool.query('SELECT * FROM aircraft WHERE id = $1', [id]);
+  const result = await pool.query('SELECT * FROM aircraft WHERE id = $1 AND is_archived = false', [id]);
   if (result.rows.length === 0) {
     return res.status(404).json({ error: 'Aircraft not found' });
   }
@@ -44,11 +46,36 @@ const updateAircraft = async (req, res) => {
 
 const deleteAircraft = async (req, res) => {
   const { id } = req.params;
-  const result = await pool.query('DELETE FROM aircraft WHERE id = $1 RETURNING *', [id]);
-  if (result.rows.length === 0) {
+  
+  // Check if aircraft exists
+  const checkResult = await pool.query('SELECT * FROM aircraft WHERE id = $1', [id]);
+  if (checkResult.rows.length === 0) {
     return res.status(404).json({ error: 'Aircraft not found' });
   }
-  res.json({ message: 'Aircraft deleted successfully', aircraft: result.rows[0] });
+
+  // Check for ANY reservations
+  const resCheck = await pool.query('SELECT id FROM reservations WHERE aircraft_id = $1 LIMIT 1', [id]);
+  
+  if (resCheck.rows.length > 0) {
+    // Has reservations, so archive instead
+    await pool.query(
+      'UPDATE aircraft SET is_archived = true, is_available = false WHERE id = $1',
+      [id]
+    );
+    // Cancel future reservations
+    await pool.query(
+      "UPDATE reservations SET status = 'cancelled', notes = COALESCE(notes, '') || ' (Aircraft archived)' WHERE aircraft_id = $1 AND start_time > NOW()",
+      [id]
+    );
+    return res.json({ 
+      message: 'Aircraft archived instead of deleted because it has reservation history. Future reservations have been cancelled.',
+      aircraft: { ...checkResult.rows[0], is_archived: true, is_available: false }
+    });
+  } else {
+    // No reservations, safe to delete
+    const result = await pool.query('DELETE FROM aircraft WHERE id = $1 RETURNING *', [id]);
+    res.json({ message: 'Aircraft deleted successfully', aircraft: result.rows[0] });
+  }
 };
 
 const getAircraftAvailability = async (req, res) => {
@@ -67,7 +94,7 @@ const getAircraftAvailability = async (req, res) => {
          (r.start_time < $2 AND r.end_time >= $2) OR
          (r.start_time >= $1 AND r.end_time <= $2)
        )
-     WHERE a.is_available = true
+     WHERE a.is_available = true AND a.is_archived = false
      ORDER BY a.tail_number`,
     [start_time, end_time]
   );

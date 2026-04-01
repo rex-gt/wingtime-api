@@ -5,6 +5,8 @@ jest.mock('jsonwebtoken', () => ({
   verify: jest.fn(() => ({ id: 1 }))
 }));
 
+let mockHasReservations = false;
+
 jest.mock('pg', () => {
   const mPool = {
     query: (text, params) => {
@@ -13,24 +15,33 @@ jest.mock('pg', () => {
       if (lt.includes('select id, member_number') && lt.includes('where id = $1')) {
         return Promise.resolve({ rows: [{ id: 1, member_number: 'M-1', first_name: 'Auth', last_name: 'User', email: 'auth@example.com', role: 'admin', is_active: true }] });
       }
-      if (lt.includes('select * from aircraft order by')) {
-        return Promise.resolve({ rows: [ { id: 1, tail_number: 'N100', make: 'Piper', model: 'PA-28' } ] });
+      if (lt.includes('select * from aircraft') && !lt.includes('where id = $1')) {
+        return Promise.resolve({ rows: [ { id: 1, tail_number: 'N100', make: 'Piper', model: 'PA-28', is_archived: false } ] });
       }
       if (lt.includes('where a.is_available') || lt.includes('left join reservations') || lt.includes('is_available_for_timeframe') || lt.includes('from aircraft a')) {
-        return Promise.resolve({ rows: [ { id: 1, tail_number: 'N100', make: 'Piper', model: 'PA-28', is_available_for_timeframe: true } ] });
+        return Promise.resolve({ rows: [ { id: 1, tail_number: 'N100', make: 'Piper', model: 'PA-28', is_available_for_timeframe: true, is_archived: false } ] });
       }
       if (lt.includes('insert into aircraft')) {
-        return Promise.resolve({ rows: [{ id: 5, tail_number: params[0], make: params[1], model: params[2] }] });
+        return Promise.resolve({ rows: [{ id: 5, tail_number: params[0], make: params[1], model: params[2], is_archived: false }] });
       }
       if (lt.includes('select * from aircraft where id = $1')) {
         const idRaw = params && params[0];
         const id = typeof idRaw === 'string' ? parseInt(idRaw, 10) : idRaw;
-        return Promise.resolve({ rows: [{ id, tail_number: 'N100', make: 'Piper', model: 'PA-28' }] });
+        return Promise.resolve({ rows: [{ id, tail_number: 'N100', make: 'Piper', model: 'PA-28', is_archived: false }] });
+      }
+      if (lt.includes('select id from reservations where aircraft_id = $1')) {
+        return Promise.resolve({ rows: mockHasReservations ? [{ id: 101 }] : [] });
+      }
+      if (lt.includes('update aircraft set is_archived = true')) {
+        return Promise.resolve({ rows: [{ id: params[0], is_archived: true }] });
+      }
+      if (lt.includes('update reservations set status = \'cancelled\'')) {
+        return Promise.resolve({ rows: [] });
       }
       if (lt.includes('update aircraft')) {
         const idRaw = params && params[7];
         const id = typeof idRaw === 'string' ? parseInt(idRaw, 10) : idRaw;
-        return Promise.resolve({ rows: [{ id, tail_number: params[0], make: params[1], model: params[2] }] });
+        return Promise.resolve({ rows: [{ id, tail_number: 'N100', make: params[0], model: params[1], is_archived: false }] });
       }
       if (lt.includes('delete from aircraft')) {
         const idRaw = params && params[0];
@@ -105,10 +116,19 @@ describe('Aircraft endpoints', () => {
   });
 
   test('DELETE /api/aircraft/:id deletes aircraft', async () => {
+    mockHasReservations = false;
     const res = await httpRequest(port, '/api/aircraft/1', 'DELETE', null, { Authorization: 'Bearer faketoken' });
     expect(res.statusCode).toBe(200);
     expect(res.body).toHaveProperty('aircraft');
     expect(res.body.aircraft).toHaveProperty('id', 1);
+  });
+
+  test('DELETE /api/aircraft/:id archives aircraft if it has reservations', async () => {
+    mockHasReservations = true;
+    const res = await httpRequest(port, '/api/aircraft/1', 'DELETE', null, { Authorization: 'Bearer faketoken' });
+    expect(res.statusCode).toBe(200);
+    expect(res.body.message).toContain('archived instead of deleted');
+    expect(res.body.aircraft).toHaveProperty('is_archived', true);
   });
 
   test('GET /api/aircraft/availability returns availability', async () => {

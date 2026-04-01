@@ -25,6 +25,7 @@ CREATE TABLE aircraft (
     hourly_rate DECIMAL(10, 2) NOT NULL,
     current_tach_hours DECIMAL(10, 2) DEFAULT 0,
     is_available BOOLEAN DEFAULT true,
+    is_archived BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
