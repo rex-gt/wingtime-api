@@ -19,6 +19,16 @@ jest.mock('pg', () => {
         return Promise.resolve({ rows: [{ id: mockUserId, member_number: 'M-1', first_name: 'Test', last_name: 'User', email: 'test@example.com', role: mockUserRole, is_active: true }] });
       }
 
+      // Aircraft existence check (for deleteAircraft)
+      if (lt.includes('select * from aircraft where id = $1')) {
+        return Promise.resolve({ rows: [{ id: 1, tail_number: 'N100' }] });
+      }
+
+      // Check for reservations (for deleteAircraft)
+      if (lt.includes('select id from reservations where aircraft_id = $1')) {
+        return Promise.resolve({ rows: [] });
+      }
+
       // Aircraft availability check (for createReservation and updateReservation)
       if (lt.includes('select is_available from aircraft where id')) {
         return Promise.resolve({ rows: [{ is_available: true }] });
@@ -57,7 +67,8 @@ jest.mock('pg', () => {
 
       // Update aircraft
       if (lt.includes('update aircraft')) {
-        return Promise.resolve({ rows: [{ id: 1, tail_number: 'N100', make: params[0], model: params[1] }] });
+        const id = params && params[7];
+        return Promise.resolve({ rows: [{ id: id || 1, tail_number: params[0], make: params[1], model: params[2] }] });
       }
 
       // Delete member

@@ -41,7 +41,7 @@ jest.mock('pg', () => {
       if (lt.includes('update aircraft')) {
         const idRaw = params && params[7];
         const id = typeof idRaw === 'string' ? parseInt(idRaw, 10) : idRaw;
-        return Promise.resolve({ rows: [{ id, tail_number: 'N100', make: params[0], model: params[1], is_archived: false }] });
+        return Promise.resolve({ rows: [{ id, tail_number: params[0], make: params[1], model: params[2], is_archived: false }] });
       }
       if (lt.includes('delete from aircraft')) {
         const idRaw = params && params[0];
