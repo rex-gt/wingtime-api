@@ -61,12 +61,12 @@ jest.mock('pg', () => {
       }
       // Update reservation
       if (lt.includes('update reservations')) {
-        const id = params && params[5];
+        const id = params && params[6];
         if (id === '1') {
           // Simulate updated reservation with all fields
           return Promise.resolve({ rows: [{
             id,
-            member_id: 1,
+            member_id: params[5] || 1,
             aircraft_id: params[4] || 2,
             start_time: params[0],
             end_time: params[1],

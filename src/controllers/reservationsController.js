@@ -110,7 +110,7 @@ const createReservation = async (req, res) => {
 
 const updateReservation = async (req, res) => {
   const { id } = req.params;
-  const { start_time, end_time, status, notes, aircraft_id } = req.body;
+  const { start_time, end_time, status, notes, aircraft_id, member_id } = req.body;
 
   if (req.user && req.user.role === 'member') {
     const check = await pool.query('SELECT member_id FROM reservations WHERE id = $1', [id]);
@@ -119,6 +119,9 @@ const updateReservation = async (req, res) => {
     }
     if (check.rows[0].member_id !== req.user.id) {
       return res.status(403).json({ error: 'Forbidden: you can only update your own reservations' });
+    }
+    if (member_id !== undefined && member_id !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden: members cannot change the person on a reservation' });
     }
   }
 
@@ -168,10 +171,15 @@ const updateReservation = async (req, res) => {
 
   const result = await pool.query(
     `UPDATE reservations
-     SET start_time = COALESCE($1, start_time), end_time = COALESCE($2, end_time), status = COALESCE($3, status), notes = COALESCE($4, notes), aircraft_id = COALESCE($5, aircraft_id)
-     WHERE id = $6
+     SET start_time = COALESCE($1, start_time), 
+         end_time = COALESCE($2, end_time), 
+         status = COALESCE($3, status), 
+         notes = COALESCE($4, notes), 
+         aircraft_id = COALESCE($5, aircraft_id),
+         member_id = COALESCE($6, member_id)
+     WHERE id = $7
      RETURNING *`,
-    [start_time, end_time, status, notes, aircraft_id, id]
+    [start_time, end_time, status, notes, aircraft_id, member_id, id]
   );
   if (result.rows.length === 0) {
     return res.status(404).json({ error: 'Reservation not found' });
