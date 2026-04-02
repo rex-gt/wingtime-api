@@ -397,7 +397,12 @@ describe('Role-based access control', () => {
   test('Member can create a reservation for themselves', async () => {
     mockUserRole = 'member';
     mockUserId = 1;
-    const payload = { member_id: 1, aircraft_id: 2, start_time: '2026-08-01T09:00:00Z', end_time: '2026-08-01T10:00:00Z' };
+    const startTime = new Date();
+    startTime.setDate(startTime.getDate() + 1);
+    const endTime = new Date(startTime);
+    endTime.setHours(endTime.getHours() + 1);
+
+    const payload = { member_id: 1, aircraft_id: 2, start_time: startTime.toISOString(), end_time: endTime.toISOString() };
     const res = await httpRequest(port, '/api/reservations', 'POST', payload, { Authorization: 'Bearer faketoken' });
     expect(res.statusCode).toBe(201);
   });
@@ -405,7 +410,12 @@ describe('Role-based access control', () => {
   test('Member cannot create a reservation for another member (403)', async () => {
     mockUserRole = 'member';
     mockUserId = 1;
-    const payload = { member_id: 99, aircraft_id: 2, start_time: '2026-08-01T09:00:00Z', end_time: '2026-08-01T10:00:00Z' };
+    const startTime = new Date();
+    startTime.setDate(startTime.getDate() + 1);
+    const endTime = new Date(startTime);
+    endTime.setHours(endTime.getHours() + 1);
+
+    const payload = { member_id: 99, aircraft_id: 2, start_time: startTime.toISOString(), end_time: endTime.toISOString() };
     const res = await httpRequest(port, '/api/reservations', 'POST', payload, { Authorization: 'Bearer faketoken' });
     expect(res.statusCode).toBe(403);
     expect(res.body).toHaveProperty('error');
@@ -414,7 +424,12 @@ describe('Role-based access control', () => {
   test('Operator can create a reservation for any member', async () => {
     mockUserRole = 'operator';
     mockUserId = 2;
-    const payload = { member_id: 99, aircraft_id: 2, start_time: '2026-08-01T09:00:00Z', end_time: '2026-08-01T10:00:00Z' };
+    const startTime = new Date();
+    startTime.setDate(startTime.getDate() + 1);
+    const endTime = new Date(startTime);
+    endTime.setHours(endTime.getHours() + 1);
+
+    const payload = { member_id: 99, aircraft_id: 2, start_time: startTime.toISOString(), end_time: endTime.toISOString() };
     const res = await httpRequest(port, '/api/reservations', 'POST', payload, { Authorization: 'Bearer faketoken' });
     expect(res.statusCode).toBe(201);
   });
@@ -422,7 +437,12 @@ describe('Role-based access control', () => {
   test('Admin can create a reservation for any member', async () => {
     mockUserRole = 'admin';
     mockUserId = 1;
-    const payload = { member_id: 99, aircraft_id: 2, start_time: '2026-08-01T09:00:00Z', end_time: '2026-08-01T10:00:00Z' };
+    const startTime = new Date();
+    startTime.setDate(startTime.getDate() + 1);
+    const endTime = new Date(startTime);
+    endTime.setHours(endTime.getHours() + 1);
+
+    const payload = { member_id: 99, aircraft_id: 2, start_time: startTime.toISOString(), end_time: endTime.toISOString() };
     const res = await httpRequest(port, '/api/reservations', 'POST', payload, { Authorization: 'Bearer faketoken' });
     expect(res.statusCode).toBe(201);
   });

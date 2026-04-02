@@ -120,8 +120,9 @@ STATUS=$($CURL -o /dev/null -w "%{http_code}" -X PUT "$BASE_URL/api/aircraft/$AI
   -d '{"make":"Cessna","model":"172S","year":2020,"hourly_rate":160,"current_tach_hours":505,"is_available":true}')
 check "PUT /api/aircraft/:id" "200" "$STATUS"
 
+FUTURE_DATE=$(date -u -v+1d +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date -u -d "+1 day" +"%Y-%m-%dT%H:%M:%SZ")
 STATUS=$($CURL -o /dev/null -w "%{http_code}" \
-  "$BASE_URL/api/aircraft/availability?start_time=2026-04-01T10:00:00Z&end_time=2026-04-01T12:00:00Z" \
+  "$BASE_URL/api/aircraft/availability?start_time=$FUTURE_DATE&end_time=$FUTURE_DATE" \
   -H "Authorization: Bearer $TOKEN")
 check "GET /api/aircraft/availability" "200" "$STATUS"
 
