@@ -5,6 +5,7 @@ const aircraftRoutes = require('./routes/aircraftRoutes');
 const reservationsRoutes = require('./routes/reservationsRoutes');
 const flightLogsRoutes = require('./routes/flightLogsRoutes');
 const billingRoutes = require('./routes/billingRoutes');
+const maintenanceRoutes = require('./routes/maintenanceRoutes');
 const squawkRoutes = require('./routes/squawkRoutes');
 const utilityRoutes = require('./routes/utilityRoutes');
 const pool = require('./config/database');
@@ -71,6 +72,7 @@ app.use('/api/aircraft', aircraftRoutes);
 app.use('/api/reservations', reservationsRoutes);
 app.use('/api/flight-logs', flightLogsRoutes);
 app.use('/api/billing', billingRoutes);
+app.use('/api/maintenance', maintenanceRoutes);
 app.use('/api/squawks', squawkRoutes);
 app.use('/api', utilityRoutes);
 

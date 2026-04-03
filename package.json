@@ -13,6 +13,8 @@
     "railway:setup": "./scripts/railway/setup-full.sh",
     "railway:setup-vars": "./scripts/railway/setup-env-vars.sh",
     "railway:setup-db": "./scripts/railway/setup-db.sh",
+    "migrate:52": "./scripts/db/migrate-52-aircraft-archive.sh",
+    "migrate": "./scripts/db/migrate.sh",
     "railway:deploy": "./scripts/railway/deploy.sh",
     "railway:view-vars": "./scripts/railway/view-vars.sh",
     "railway:test-email": "./scripts/railway/test-email.sh",
