@@ -57,7 +57,7 @@ while IFS= read -r line || [ -n "$line" ]; do
     
     if [ -n "$key" ] && [ -n "$value" ]; then
         echo "Setting $key..."
-        railway variables set "$key"="$value"
+        railway variables set --service aerobook-api "$key"="$value"
     fi
 done < "$ENV_FILE"
 
