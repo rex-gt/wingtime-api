@@ -23,10 +23,11 @@ AeroBook API is a Node.js/Express REST API backend for a flying club management 
     - `index.js`: Main server entry.
     - `src/app.js`: Express app configuration.
     - `src/index.js`: Re-exports app for testing.
-
 ## Core Mandates & Constraints
 1. **No ORM**: Do not introduce an ORM. Use raw SQL with the `pg` pool.
-2. **Security**: 
+2. **Commit Approval**: NEVER perform a `git commit` or `git push` without receiving explicit approval from the user for that specific set of changes.
+3. **Security**: 
+...
     - Use parameterized queries (`$1`, `$2`, etc.) to prevent SQL injection.
     - Always use `protect` and `authorize` middleware for sensitive routes.
 3. **Roles**: Use exact strings: `admin`, `operator`, `member`.
