@@ -25,6 +25,7 @@ CREATE TABLE aircraft (
     hourly_rate DECIMAL(10, 2) NOT NULL,
     current_tach_hours DECIMAL(10, 2) DEFAULT 0,
     is_available BOOLEAN DEFAULT true,
+    is_archived BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -76,6 +77,41 @@ CREATE TABLE billing_records (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Maintenance items table
+CREATE TABLE maintenance_items (
+    id SERIAL PRIMARY KEY,
+    aircraft_id INTEGER NOT NULL REFERENCES aircraft(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_by INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+    due_date DATE,
+    status VARCHAR(20) DEFAULT 'open' CHECK (status IN ('open', 'fixed', 'obsolete')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Squawks table
+CREATE TABLE squawks (
+    id SERIAL PRIMARY KEY,
+    aircraft_id INTEGER NOT NULL REFERENCES aircraft(id) ON DELETE CASCADE,
+    severity VARCHAR(20) NOT NULL CHECK (severity IN ('Low', 'Urgent', 'Approved Grounding')),
+    description TEXT NOT NULL,
+    observed_date DATE NOT NULL,
+    created_by INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+    status VARCHAR(20) DEFAULT 'open' CHECK (status IN ('open', 'closed')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Squawk comments table
+CREATE TABLE squawk_comments (
+    id SERIAL PRIMARY KEY,
+    squawk_id INTEGER NOT NULL REFERENCES squawks(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+    comment TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for better query performance
 CREATE INDEX idx_reservations_member ON reservations(member_id);
 CREATE INDEX idx_reservations_aircraft ON reservations(aircraft_id);
@@ -87,7 +123,7 @@ CREATE INDEX idx_flight_logs_date ON flight_logs(flight_date);
 CREATE INDEX idx_billing_records_member ON billing_records(member_id);
 CREATE INDEX idx_billing_records_paid ON billing_records(is_paid);
 
--- Function to update updated_at timestamp
+-- Function to update updated_at column
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -110,4 +146,10 @@ CREATE TRIGGER update_flight_logs_updated_at BEFORE UPDATE ON flight_logs
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_billing_records_updated_at BEFORE UPDATE ON billing_records
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_maintenance_items_updated_at BEFORE UPDATE ON maintenance_items
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_squawks_updated_at BEFORE UPDATE ON squawks
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

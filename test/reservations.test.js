@@ -61,12 +61,12 @@ jest.mock('pg', () => {
       }
       // Update reservation
       if (lt.includes('update reservations')) {
-        const id = params && params[5];
+        const id = params && params[6];
         if (id === '1') {
           // Simulate updated reservation with all fields
           return Promise.resolve({ rows: [{
             id,
-            member_id: 1,
+            member_id: params[5] || 1,
             aircraft_id: params[4] || 2,
             start_time: params[0],
             end_time: params[1],
@@ -144,11 +144,16 @@ describe('Reservations endpoint', () => {
   });
 
   test('POST /api/reservations creates a new reservation', async () => {
+    const startTime = new Date();
+    startTime.setDate(startTime.getDate() + 1); // Tomorrow
+    const endTime = new Date(startTime);
+    endTime.setHours(endTime.getHours() + 1);
+
     const payload = {
       member_id: 1,
       aircraft_id: 3,
-      start_time: '2026-04-01T09:00:00Z',
-      end_time: '2026-04-01T10:00:00Z',
+      start_time: startTime.toISOString(),
+      end_time: endTime.toISOString(),
       notes: 'Test reservation'
     };
     const res = await httpRequest(port, '/api/reservations', 'POST', payload, { Authorization: 'Bearer faketoken' });

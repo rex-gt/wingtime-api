@@ -19,6 +19,16 @@ jest.mock('pg', () => {
         return Promise.resolve({ rows: [{ id: mockUserId, member_number: 'M-1', first_name: 'Test', last_name: 'User', email: 'test@example.com', role: mockUserRole, is_active: true }] });
       }
 
+      // Aircraft existence check (for deleteAircraft)
+      if (lt.includes('select * from aircraft where id = $1')) {
+        return Promise.resolve({ rows: [{ id: 1, tail_number: 'N100' }] });
+      }
+
+      // Check for reservations (for deleteAircraft)
+      if (lt.includes('select id from reservations where aircraft_id = $1')) {
+        return Promise.resolve({ rows: [] });
+      }
+
       // Aircraft availability check (for createReservation and updateReservation)
       if (lt.includes('select is_available from aircraft where id')) {
         return Promise.resolve({ rows: [{ is_available: true }] });
@@ -57,7 +67,8 @@ jest.mock('pg', () => {
 
       // Update aircraft
       if (lt.includes('update aircraft')) {
-        return Promise.resolve({ rows: [{ id: 1, tail_number: 'N100', make: params[0], model: params[1] }] });
+        const id = params && params[7];
+        return Promise.resolve({ rows: [{ id: id || 1, tail_number: params[0], make: params[1], model: params[2] }] });
       }
 
       // Delete member
@@ -102,9 +113,9 @@ jest.mock('pg', () => {
 
       // Update reservation
       if (lt.includes('update reservations')) {
-        const id = params && params[5];
+        const id = params && params[6];
         if (id === '1') {
-          return Promise.resolve({ rows: [{ id, member_id: 1, aircraft_id: params[4] || 2, start_time: params[0], end_time: params[1], status: params[2], notes: params[3] }] });
+          return Promise.resolve({ rows: [{ id, member_id: params[5] || 1, aircraft_id: params[4] || 2, start_time: params[0], end_time: params[1], status: params[2], notes: params[3] }] });
         }
         return Promise.resolve({ rows: [] });
       }
@@ -336,6 +347,33 @@ describe('Role-based access control', () => {
     expect(res.statusCode).toBe(200);
   });
 
+  test('Admin can change the member on a reservation', async () => {
+    mockUserRole = 'admin';
+    mockUserId = 1;
+    const payload = { member_id: 99 };
+    const res = await httpRequest(port, '/api/reservations/1', 'PUT', payload, { Authorization: 'Bearer faketoken' });
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toHaveProperty('member_id', 99);
+  });
+
+  test('Operator can change the member on a reservation', async () => {
+    mockUserRole = 'operator';
+    mockUserId = 2;
+    const payload = { member_id: 99 };
+    const res = await httpRequest(port, '/api/reservations/1', 'PUT', payload, { Authorization: 'Bearer faketoken' });
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toHaveProperty('member_id', 99);
+  });
+
+  test('Member cannot change the member on a reservation (even their own) (403)', async () => {
+    mockUserRole = 'member';
+    mockUserId = 1;
+    const payload = { member_id: 99 };
+    const res = await httpRequest(port, '/api/reservations/1', 'PUT', payload, { Authorization: 'Bearer faketoken' });
+    expect(res.statusCode).toBe(403);
+    expect(res.body).toHaveProperty('error', 'Forbidden: members cannot change the person on a reservation');
+  });
+
   test('Member can delete their own reservation', async () => {
     mockUserRole = 'member';
     mockUserId = 1;
@@ -359,7 +397,12 @@ describe('Role-based access control', () => {
   test('Member can create a reservation for themselves', async () => {
     mockUserRole = 'member';
     mockUserId = 1;
-    const payload = { member_id: 1, aircraft_id: 2, start_time: '2026-08-01T09:00:00Z', end_time: '2026-08-01T10:00:00Z' };
+    const startTime = new Date();
+    startTime.setDate(startTime.getDate() + 1);
+    const endTime = new Date(startTime);
+    endTime.setHours(endTime.getHours() + 1);
+
+    const payload = { member_id: 1, aircraft_id: 2, start_time: startTime.toISOString(), end_time: endTime.toISOString() };
     const res = await httpRequest(port, '/api/reservations', 'POST', payload, { Authorization: 'Bearer faketoken' });
     expect(res.statusCode).toBe(201);
   });
@@ -367,7 +410,12 @@ describe('Role-based access control', () => {
   test('Member cannot create a reservation for another member (403)', async () => {
     mockUserRole = 'member';
     mockUserId = 1;
-    const payload = { member_id: 99, aircraft_id: 2, start_time: '2026-08-01T09:00:00Z', end_time: '2026-08-01T10:00:00Z' };
+    const startTime = new Date();
+    startTime.setDate(startTime.getDate() + 1);
+    const endTime = new Date(startTime);
+    endTime.setHours(endTime.getHours() + 1);
+
+    const payload = { member_id: 99, aircraft_id: 2, start_time: startTime.toISOString(), end_time: endTime.toISOString() };
     const res = await httpRequest(port, '/api/reservations', 'POST', payload, { Authorization: 'Bearer faketoken' });
     expect(res.statusCode).toBe(403);
     expect(res.body).toHaveProperty('error');
@@ -376,7 +424,12 @@ describe('Role-based access control', () => {
   test('Operator can create a reservation for any member', async () => {
     mockUserRole = 'operator';
     mockUserId = 2;
-    const payload = { member_id: 99, aircraft_id: 2, start_time: '2026-08-01T09:00:00Z', end_time: '2026-08-01T10:00:00Z' };
+    const startTime = new Date();
+    startTime.setDate(startTime.getDate() + 1);
+    const endTime = new Date(startTime);
+    endTime.setHours(endTime.getHours() + 1);
+
+    const payload = { member_id: 99, aircraft_id: 2, start_time: startTime.toISOString(), end_time: endTime.toISOString() };
     const res = await httpRequest(port, '/api/reservations', 'POST', payload, { Authorization: 'Bearer faketoken' });
     expect(res.statusCode).toBe(201);
   });
@@ -384,7 +437,12 @@ describe('Role-based access control', () => {
   test('Admin can create a reservation for any member', async () => {
     mockUserRole = 'admin';
     mockUserId = 1;
-    const payload = { member_id: 99, aircraft_id: 2, start_time: '2026-08-01T09:00:00Z', end_time: '2026-08-01T10:00:00Z' };
+    const startTime = new Date();
+    startTime.setDate(startTime.getDate() + 1);
+    const endTime = new Date(startTime);
+    endTime.setHours(endTime.getHours() + 1);
+
+    const payload = { member_id: 99, aircraft_id: 2, start_time: startTime.toISOString(), end_time: endTime.toISOString() };
     const res = await httpRequest(port, '/api/reservations', 'POST', payload, { Authorization: 'Bearer faketoken' });
     expect(res.statusCode).toBe(201);
   });
