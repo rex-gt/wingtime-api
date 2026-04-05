@@ -24,11 +24,15 @@ const { processReminders } = require('./src/controllers/reservationsController')
 
 const PORT = process.env.PORT || 3000;
 
-// Schedule reminders check every hour
-cron.schedule('0 * * * *', () => {
-  console.log('[Scheduler] Running reservation reminders job...');
-  processReminders();
-});
+// Schedule reminders check every hour (only in staging/production)
+if (process.env.NODE_ENV !== 'development') {
+  cron.schedule('0 * * * *', () => {
+    console.log('[Scheduler] Running reservation reminders job...');
+    processReminders();
+  });
+} else {
+  console.log('[Scheduler] Reminders job is disabled in development mode.');
+}
 
 if (process.env.SSL_KEY_PATH && process.env.SSL_CERT_PATH) {
   let sslOptions;
