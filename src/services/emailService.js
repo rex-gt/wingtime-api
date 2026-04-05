@@ -74,10 +74,24 @@ const sendReservationConfirmationEmail = async (user, reservation, action = 'cre
     const actionText = action === 'created' ? 'confirmed' : action === 'updated' ? 'updated' : 'cancelled';
     const subject = `Reservation ${actionText.charAt(0).toUpperCase() + actionText.slice(1)}: ${reservation.tail_number}`;
 
-    const dateStr = new Date(reservation.start_time).toLocaleString('en-US', {
+    const startDate = new Date(reservation.start_time);
+    const endDate = new Date(reservation.end_time);
+
+    const formatOptions = {
         weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
-        hour: 'numeric', minute: '2-digit'
-    });
+        hour: 'numeric', minute: '2-digit', timeZone: 'UTC', timeZoneName: 'short'
+    };
+
+    const startStr = startDate.toLocaleString('en-US', formatOptions);
+    
+    // Check if it ends on a different day
+    const isMultiDay = startDate.getUTCFullYear() !== endDate.getUTCFullYear() ||
+                       startDate.getUTCMonth() !== endDate.getUTCMonth() ||
+                       startDate.getUTCDate() !== endDate.getUTCDate();
+
+    const endStr = isMultiDay 
+        ? endDate.toLocaleString('en-US', formatOptions)
+        : endDate.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'UTC', timeZoneName: 'short' });
 
     console.log(`[EmailService] Sending Reservation ${actionText} Email to: ${user.email}`);
     console.log(`[EmailService] Subject: ${subject}`);
@@ -92,8 +106,8 @@ const sendReservationConfirmationEmail = async (user, reservation, action = 'cre
                 <p>Hello ${user.first_name},</p>
                 <p>Your reservation for <strong>${reservation.tail_number}</strong> (${reservation.make} ${reservation.model}) has been ${actionText}.</p>
                 <div style="background: #f0f9ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                    <p><strong>Start:</strong> ${dateStr}</p>
-                    <p><strong>End:</strong> ${new Date(reservation.end_time).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' })}</p>
+                    <p><strong>Start:</strong> ${startStr}</p>
+                    <p><strong>End:</strong> ${endStr}</p>
                     ${reservation.notes ? `<p><strong>Notes:</strong> ${reservation.notes}</p>` : ''}
                 </div>
                 <p>You can view your reservations at any time by logging into the <a href="${appUrl}">AeroBook app</a>.</p>

@@ -33,6 +33,48 @@ describe('Email Service', () => {
     const emailService = require('../src/services/emailService');
     sendWelcomeEmail = emailService.sendWelcomeEmail;
     sendPasswordResetEmail = emailService.sendPasswordResetEmail;
+    sendReservationConfirmationEmail = emailService.sendReservationConfirmationEmail;
+  });
+
+  test('sendReservationConfirmationEmail should format single-day reservations correctly', async () => {
+    const user = { first_name: 'John', email: 'john@example.com' };
+    const reservation = {
+      tail_number: 'N12345',
+      make: 'Cessna',
+      model: '172',
+      start_time: '2026-05-01T10:00:00Z',
+      end_time: '2026-05-01T12:00:00Z',
+      notes: 'Lunch flight'
+    };
+
+    await sendReservationConfirmationEmail(user, reservation, 'created');
+
+    const emailCall = mockSend.mock.calls[0][0];
+    expect(emailCall.subject).toBe('Reservation Confirmed: N12345');
+    // Check for UTC/GMT in formatted date (depends on locale but we forced UTC)
+    expect(emailCall.html).toContain('UTC'); 
+    expect(emailCall.html).toContain('10:00 AM');
+    expect(emailCall.html).toContain('12:00 PM');
+    expect(emailCall.html).toContain('Lunch flight');
+  });
+
+  test('sendReservationConfirmationEmail should format multi-day reservations with end date', async () => {
+    const user = { first_name: 'Alice', email: 'alice@example.com' };
+    const reservation = {
+      tail_number: 'N54321',
+      make: 'Piper',
+      model: 'Archer',
+      start_time: '2026-05-01T10:00:00Z',
+      end_time: '2026-05-03T15:00:00Z'
+    };
+
+    await sendReservationConfirmationEmail(user, reservation, 'updated');
+
+    const emailCall = mockSend.mock.calls[0][0];
+    expect(emailCall.subject).toBe('Reservation Updated: N54321');
+    // Should contain the end date since it's a different day
+    expect(emailCall.html).toContain('Friday, May 1, 2026');
+    expect(emailCall.html).toContain('Sunday, May 3, 2026');
   });
 
   test('sendWelcomeEmail should send email with correct structure', async () => {
