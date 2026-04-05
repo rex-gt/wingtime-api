@@ -14,19 +14,25 @@ const sendWelcomeEmail = async (user) => {
     );
     const resetLink = `${appUrl}/reset-password?token=${resetToken}`;
 
-    await resend.emails.send({
-        from: process.env.RESEND_FROM || 'AeroBook <noreply@aerobook.app>',
-        to: user.email,
-        subject: 'Welcome to AeroBook!',
-        html: `
-            <h1>Welcome to AeroBook, ${user.first_name}!</h1>
-            <p>Your account has been successfully created. You can now access the AeroBook flight scheduling app.</p>
-            <p>To set up your AeroBook password, please click the link below:</p>
-            <p><a href="${resetLink}">Set up your AeroBook password</a></p>
-            <p>This link will expire in 24 hours.</p>
-            <p>If you did not create this account, please ignore this email.</p>
-        `,
-    });
+    console.log(`[EmailService] Sending Welcome Email to: ${user.email}`);
+
+    try {
+        await resend.emails.send({
+            from: process.env.RESEND_FROM || 'AeroBook <noreply@aerobook.app>',
+            to: user.email,
+            subject: 'Welcome to AeroBook!',
+            html: `
+                <h1>Welcome to AeroBook, ${user.first_name}!</h1>
+                <p>Your account has been successfully created. You can now access the AeroBook flight scheduling app.</p>
+                <p>To set up your AeroBook password, please click the link below:</p>
+                <p><a href="${resetLink}">Set up your AeroBook password</a></p>
+                <p>This link will expire in 24 hours.</p>
+                <p>If you did not create this account, please ignore this email.</p>
+            `,
+        });
+    } catch (err) {
+        console.error(`[EmailService] Failed to send welcome email: ${err.message}`);
+    }
 };
 
 const sendPasswordResetEmail = async (user) => {
@@ -39,20 +45,26 @@ const sendPasswordResetEmail = async (user) => {
     );
     const resetLink = `${appUrl}/reset-password?token=${resetToken}`;
 
-    await resend.emails.send({
-        from: process.env.RESEND_FROM || 'AeroBook <noreply@aerobook.app>',
-        to: user.email,
-        subject: 'Password Reset Request',
-        html: `
-            <h1>Password Reset Request</h1>
-            <p>Hello ${user.first_name},</p>
-            <p>You requested a password reset for your AeroBook account.</p>
-            <p>Please click the link below to set a new password:</p>
-            <p><a href="${resetLink}">Reset your AeroBook password</a></p>
-            <p>This link will expire in <strong>10 minutes</strong>.</p>
-            <p>If you did not request this reset, please ignore this email and your password will remain unchanged.</p>
-        `,
-    });
+    console.log(`[EmailService] Sending Password Reset Email to: ${user.email}`);
+
+    try {
+        await resend.emails.send({
+            from: process.env.RESEND_FROM || 'AeroBook <noreply@aerobook.app>',
+            to: user.email,
+            subject: 'Password Reset Request',
+            html: `
+                <h1>Password Reset Request</h1>
+                <p>Hello ${user.first_name},</p>
+                <p>You requested a password reset for your AeroBook account.</p>
+                <p>Please click the link below to set a new password:</p>
+                <p><a href="${resetLink}">Reset your AeroBook password</a></p>
+                <p>This link will expire in <strong>10 minutes</strong>.</p>
+                <p>If you did not request this reset, please ignore this email and your password will remain unchanged.</p>
+            `,
+        });
+    } catch (err) {
+        console.error(`[EmailService] Failed to send password reset email: ${err.message}`);
+    }
 };
 
 const sendReservationConfirmationEmail = async (user, reservation, action = 'created') => {
@@ -65,22 +77,29 @@ const sendReservationConfirmationEmail = async (user, reservation, action = 'cre
         hour: 'numeric', minute: '2-digit'
     });
 
-    await resend.emails.send({
-        from: process.env.RESEND_FROM || 'AeroBook <noreply@aerobook.app>',
-        to: user.email,
-        subject: subject,
-        html: `
-            <h1>Reservation ${actionText.charAt(0).toUpperCase() + actionText.slice(1)}</h1>
-            <p>Hello ${user.first_name},</p>
-            <p>Your reservation for <strong>${reservation.tail_number}</strong> (${reservation.make} ${reservation.model}) has been ${actionText}.</p>
-            <div style="background: #f0f9ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                <p><strong>Start:</strong> ${dateStr}</p>
-                <p><strong>End:</strong> ${new Date(reservation.end_time).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' })}</p>
-                ${reservation.notes ? `<p><strong>Notes:</strong> ${reservation.notes}</p>` : ''}
-            </div>
-            <p>You can view your reservations at any time by logging into the <a href="${appUrl}">AeroBook app</a>.</p>
-        `,
-    });
+    console.log(`[EmailService] Sending Reservation ${actionText} Email to: ${user.email}`);
+    console.log(`[EmailService] Subject: ${subject}`);
+
+    try {
+        await resend.emails.send({
+            from: process.env.RESEND_FROM || 'AeroBook <noreply@aerobook.app>',
+            to: user.email,
+            subject: subject,
+            html: `
+                <h1>Reservation ${actionText.charAt(0).toUpperCase() + actionText.slice(1)}</h1>
+                <p>Hello ${user.first_name},</p>
+                <p>Your reservation for <strong>${reservation.tail_number}</strong> (${reservation.make} ${reservation.model}) has been ${actionText}.</p>
+                <div style="background: #f0f9ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                    <p><strong>Start:</strong> ${dateStr}</p>
+                    <p><strong>End:</strong> ${new Date(reservation.end_time).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit' })}</p>
+                    ${reservation.notes ? `<p><strong>Notes:</strong> ${reservation.notes}</p>` : ''}
+                </div>
+                <p>You can view your reservations at any time by logging into the <a href="${appUrl}">AeroBook app</a>.</p>
+            `,
+        });
+    } catch (err) {
+        console.error(`[EmailService] Failed to send reservation email: ${err.message}`);
+    }
 };
 
 module.exports = { sendWelcomeEmail, sendPasswordResetEmail, sendReservationConfirmationEmail };
