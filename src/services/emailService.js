@@ -32,6 +32,7 @@ const sendWelcomeEmail = async (user) => {
         });
     } catch (err) {
         console.error(`[EmailService] Failed to send welcome email: ${err.message}`);
+        throw err;
     }
 };
 
@@ -64,6 +65,7 @@ const sendPasswordResetEmail = async (user) => {
         });
     } catch (err) {
         console.error(`[EmailService] Failed to send password reset email: ${err.message}`);
+        throw err;
     }
 };
 
@@ -99,6 +101,7 @@ const sendReservationConfirmationEmail = async (user, reservation, action = 'cre
         });
     } catch (err) {
         console.error(`[EmailService] Failed to send reservation email: ${err.message}`);
+        throw err;
     }
 };
 
