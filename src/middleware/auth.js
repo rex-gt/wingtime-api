@@ -2,6 +2,11 @@ const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
 
 const protect = async (req, res, next) => {
+  // If already authenticated via API key, proceed
+  if (req.user) {
+    return next();
+  }
+
   let token;
 
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
