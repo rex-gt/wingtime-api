@@ -65,6 +65,7 @@ aerobook-api/
 - **Availability Checking**: Query aircraft availability for specific time ranges
 - **JWT Authentication**: Secure endpoints with token-based authentication
 - **Role-Based Access Control (RBAC)**: Three user roles (Admin, Operator, Member) with enforced permissions
+- **Developer API Keys**: Secure server-to-server authentication for automated tools and integrations
 - **HTTPS Support**: Optional SSL/TLS encryption with configurable certificates
 - **Protected Endpoints**: All API endpoints require authentication and role authorization
 - **Welcome Email Service**: Automated welcome emails with password reset links for new members
@@ -218,6 +219,33 @@ All endpoints require a valid JWT (`Authorization: Bearer <token>`). Role requir
 | `/api/reservations` | All | Any authenticated |
 | `/api/flight-logs` | All | Any authenticated |
 | `/api/billing` | All | Any authenticated |
+| `/api/api-keys` | All | admin |
+
+## Developer API Keys
+
+AeroBook API supports Developer API Keys for server-to-server integrations. These keys allow bypass of the JWT authentication flow for specific tasks.
+
+### Management
+
+Only users with the `admin` role can manage API keys via the following endpoints:
+
+- `GET /api/api-keys`: List all active API keys
+- `POST /api/api-keys`: Create a new API key (requires `name` in body)
+- `DELETE /api/api-keys/:id`: Revoke an API key
+
+### Usage
+
+To authenticate using an API key, include the `X-API-Key` header in your requests:
+
+```bash
+curl http://localhost:3000/api/aircraft \
+  -H "X-API-Key: your_32_byte_hex_key_here"
+```
+
+When an API key is used:
+1. The request is associated with the `admin` user who created the key.
+2. The `authorize` middleware respects the role of that creator.
+3. Actions are logged as being performed by that user.
 
 ## Email Service
 
