@@ -47,6 +47,11 @@ jest.mock('pg', () => {
       }
       // GET list
       if (lt.includes('select r.*') && !lt.includes('where r.id =')) {
+        if (lt.includes('fl.id is null') && lt.includes('r.end_time < now()')) {
+          return Promise.resolve({ rows: [
+            { id: 42, member_id: 1, aircraft_id: 2, start_time: '2026-01-01T10:00:00Z', end_time: '2026-01-01T11:00:00Z', status: 'booked', needs_log: true }
+          ] });
+        }
         return Promise.resolve({ rows: [
           { id: 1, member_id: 1, aircraft_id: 2, start_time: '2026-02-01T10:00:00Z', end_time: '2026-02-01T11:00:00Z', status: 'booked', notes: 'Initial' }
         ] });
@@ -128,6 +133,15 @@ describe('Reservations endpoint', () => {
     const res = await httpRequest(port, '/api/reservations?member_id=1&status=scheduled', 'GET', null, { Authorization: 'Bearer faketoken' });
     expect(res.statusCode).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
+  });
+
+  test('GET /api/reservations with needs_log=true filter appends correct SQL conditions', async () => {
+    const res = await httpRequest(port, '/api/reservations?needs_log=true', 'GET', null, { Authorization: 'Bearer faketoken' });
+    expect(res.statusCode).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBe(1);
+    expect(res.body[0].id).toBe(42);
+    expect(res.body[0].needs_log).toBe(true);
   });
 
   test('GET /api/reservations/:id returns a reservation', async () => {

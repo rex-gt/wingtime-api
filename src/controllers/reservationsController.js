@@ -2,7 +2,7 @@ const pool = require('../config/database');
 const emailService = require('../services/emailService');
 
 const getReservations = async (req, res) => {
-  const { member_id, aircraft_id, status, start_date, end_date } = req.query;
+  const { member_id, aircraft_id, status, start_date, end_date, needs_log } = req.query;
   let query = `
     SELECT r.*,
            m.first_name || ' ' || m.last_name as member_name,
@@ -10,6 +10,7 @@ const getReservations = async (req, res) => {
     FROM reservations r
     JOIN members m ON r.member_id = m.id
     JOIN aircraft a ON r.aircraft_id = a.id
+    LEFT JOIN flight_logs fl ON r.id = fl.reservation_id
     WHERE 1=1
   `;
   const params = [];
@@ -38,6 +39,9 @@ const getReservations = async (req, res) => {
     query += ` AND r.end_time <= $${paramCount}`;
     params.push(end_date);
     paramCount++;
+  }
+  if (needs_log === 'true') {
+    query += ` AND r.status NOT IN ('cancelled', 'completed') AND r.end_time < NOW() AND fl.id IS NULL`;
   }
   query += ' ORDER BY r.start_time DESC';
   const result = await pool.query(query, params);
