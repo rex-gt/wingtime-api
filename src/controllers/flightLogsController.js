@@ -77,7 +77,7 @@ const createFlightLog = async (req, res) => {
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      RETURNING *`,
     [reservation_id, member_id, aircraft_id, tach_start, tach_end,
-     flight_date, departure_time, arrival_time]
+     flight_date, departure_time, arrival_time].map(p => p === undefined ? null : p)
   );
 
   if (tach_end) {
@@ -100,7 +100,7 @@ const updateFlightLog = async (req, res) => {
          departure_time = $4, arrival_time = $5
      WHERE id = $6
      RETURNING *`,
-    [tach_start, tach_end, flight_date, departure_time, arrival_time, id]
+    [tach_start, tach_end, flight_date, departure_time, arrival_time, id].map(p => p === undefined ? null : p)
   );
 
   if (result.rows.length === 0) {
