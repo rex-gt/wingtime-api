@@ -198,7 +198,7 @@ const updateReservation = async (req, res) => {
          member_id = COALESCE($6, member_id)
      WHERE id = $7
      RETURNING *`,
-    [start_time, end_time, status, notes, aircraft_id, member_id, id]
+    [start_time, end_time, status, notes, aircraft_id, member_id, id].map(p => p === undefined ? null : p)
   );
   if (result.rows.length === 0) {
     return res.status(404).json({ error: 'Reservation not found' });
